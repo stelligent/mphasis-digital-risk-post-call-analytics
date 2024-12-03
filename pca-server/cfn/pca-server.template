@@ -20,15 +20,15 @@ Parameters:
       - 'ANTHROPIC'
       - 'LAMBDA'
     Description: >
-      Set to enable call summarization by a Large Language Model. 
-      The BEDROCK+TCA will use Transcribe Call Analytics for summarization and Bedrock for other analytics. 
+      Set to enable call summarization by a Large Language Model.
+      The BEDROCK+TCA will use Transcribe Call Analytics for summarization and Bedrock for other analytics.
       The BEDROCK option requires you to choose one of the supported model IDs from the provided list (SummarizationBedrockModelId).
       You must also accept access to that model in the Amazon Bedrock > Model Access console.
       The TCA-ONLY option will not use Bedrock, but will only use Transcribe Call Analytics summarization.
-      The SAGEMAKER option uses a SageMaker endpoint with the pretrained bart-large-cnn-samsum model with a ml.m5.xlarge instance type.  
-      The LAMBDA option requires you to provide a function ARN below. 
-      The ANTHROPIC option is a third party service, and you must enter your Anthropic API key in the Third Party LLM API Key section. 
-  
+      The SAGEMAKER option uses a SageMaker endpoint with the pretrained bart-large-cnn-samsum model with a ml.m5.xlarge instance type.
+      The LAMBDA option requires you to provide a function ARN below.
+      The ANTHROPIC option is a third party service, and you must enter your Anthropic API key in the Third Party LLM API Key section.
+
   SummarizationBedrockModelId:
     Type: String
     Default: anthropic.claude-3-haiku-20240307-v1:0
@@ -59,7 +59,7 @@ Parameters:
     Type: String
     AllowedPattern: '^(|arn:aws:lambda:.*)$'
     Description: >
-      (Optional) If 'CallSummarization' is LAMBDA, provide ARN for a Lambda function. 
+      (Optional) If 'CallSummarization' is LAMBDA, provide ARN for a Lambda function.
 
   Boto3LayerArn:
     Default: ''
@@ -116,18 +116,18 @@ Resources:
       Parameters:
         TableName: !GetAtt DDB.Outputs.TableName
         FFMPEGZipName: !GetAtt FFMPEG.Outputs.FFMPEGZipName
-        Boto3Layer:  !If 
+        Boto3Layer:  !If
           - ShouldCreateBoto3Layer
           - !GetAtt BOTO3.Outputs.Boto3Layer
           - !Ref Boto3LayerArn
         PyUtilsLayer: !Ref PyUtilsLayerArn
         CallSummarization: !Ref CallSummarization
         SummarizationBedrockModelId: !Ref SummarizationBedrockModelId
-        SummarizationSagemakerEndpointName: !If 
+        SummarizationSagemakerEndpointName: !If
           - ShouldDeploySageMakerSummarizer
           - !GetAtt SageMakerTranscriptSummaryStack.Outputs.EndpointName
           - ''
-        SummarizationSagemakerEndpointArn: !If 
+        SummarizationSagemakerEndpointArn: !If
           - ShouldDeploySageMakerSummarizer
           - !GetAtt SageMakerTranscriptSummaryStack.Outputs.EndpointArn
           - ''
@@ -141,18 +141,31 @@ Resources:
       TemplateURL: lib/trigger.template
       Parameters:
         TableName: !GetAtt DDB.Outputs.TableName
-        Boto3Layer: !If 
+        Boto3Layer: !If
           - ShouldCreateBoto3Layer
           - !GetAtt BOTO3.Outputs.Boto3Layer
           - !Ref Boto3LayerArn
         PyUtilsLayer: !Ref PyUtilsLayerArn
         Summarize: !If [IsTranscriptSummaryEnabled, "true", "false"]
 
+
+  Preload:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: lib/preload.template
+      Parameters:
+        Boto3Layer: !If
+          - ShouldCreateBoto3Layer
+          - !GetAtt BOTO3.Outputs.Boto3Layer
+          - !Ref Boto3LayerArn
+        PyUtilsLayer: !Ref PyUtilsLayerArn
+
+
   BulkImport:
     Type: AWS::CloudFormation::Stack
     Properties:
       TemplateURL: lib/bulk.template
-      
+
   GlueDatabase:
     Type: AWS::CloudFormation::Stack
     Properties:
@@ -172,7 +185,7 @@ Resources:
         InitialInstanceCount: !Ref SummarizationSageMakerInitialInstanceCount
 
 Outputs:
-  
+
   FetchTranscriptArn:
     Value: !GetAtt PCA.Outputs.FetchTranscriptArn
 

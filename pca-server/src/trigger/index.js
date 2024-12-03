@@ -31,6 +31,10 @@ exports.handler = function (event, context) {
 
             console.log("Removed us:", JSON.stringify(data, null, 4));
 
+            if (prefix != '') {
+                prefix = `${prefix}/`
+
+            }
             if (event.RequestType != "Delete") {
                 // Add it back in
                 data.LambdaFunctionConfigurations.push({
@@ -42,7 +46,7 @@ exports.handler = function (event, context) {
                             FilterRules: [
                                 {
                                     Name: "prefix",
-                                    Value: `${prefix}/`,
+                                    Value: `${prefix}`,
                                 },
                             ],
                         },

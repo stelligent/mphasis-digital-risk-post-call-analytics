@@ -51,6 +51,10 @@ CONF_REDACTION_TRANSCRIPT = "CallRedactionTranscript"
 CONF_REDACTION_AUDIO = "CallRedactionAudio"
 CONF_CALL_SUMMARIZATION = "CallSummarization"
 
+CONF_PCA_VERSION = "PCAVersion"
+CONF_PRELOAD_BUCKET_NAME = "PreloadBucketName"
+CONF_PRELOAD_OBJECT_KEY_REGEX = "PreloadObjectKeyRegex"
+
 # Parameter store fieldnames used by bulk import
 BULK_S3_BUCKET = "BulkUploadBucket"
 BULK_JOB_LIMIT = "BulkUploadMaxTranscribeJobs"
@@ -77,10 +81,10 @@ NLP_THROTTLE_RETRIES = 3
 appConfig = {}
 
 config = Config(
-   retries = {
-      'max_attempts': 100,
-      'mode': 'adaptive'
-   }
+    retries = {
+        'max_attempts': 100,
+        'mode': 'adaptive'
+    }
 )
 
 def extractParameters(ssmResponse, useTagName):
@@ -167,12 +171,19 @@ def loadConfiguration():
             CONF_CALL_SUMMARIZATION
         ]
     )
-
+    fullParamList5 = ssm.get_parameters(
+        Names=[
+            CONF_PCA_VERSION,
+            CONF_PRELOAD_BUCKET_NAME,
+            CONF_PRELOAD_OBJECT_KEY_REGEX
+        ]
+    )
     # Extract our parameters into our config
     extractParameters(fullParamList1, False)
     extractParameters(fullParamList2, False)
     extractParameters(fullParamList3, False)
     extractParameters(fullParamList4, False)
+    extractParameters(fullParamList5, False)
 
     # If any important empty values to something
     if (appConfig[CONF_MINNEGATIVE]) == "":

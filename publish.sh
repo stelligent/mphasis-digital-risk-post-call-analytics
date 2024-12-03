@@ -116,7 +116,7 @@ cp pca-dashboards/pca-dashboards.yaml build/pca-dashboards.yaml
 echo "Packaging Cfn artifacts"
 aws cloudformation package --template-file pca-main.template --output-template-file build/packaged.template --s3-bucket ${BUCKET} --s3-prefix ${PREFIX_AND_VERSION} --region ${region}|| exit 1
 
-aws s3 cp build/packaged.template "s3://${BUCKET}/${PREFIX}/pca-main.yaml" || exit 1
+aws s3 cp build/packaged.template "s3://${BUCKET}/${PREFIX_AND_VERSION}/pca-main.yaml" || exit 1
 
 if $PUBLIC; then
   echo "Setting public read ACLs on published artifacts"

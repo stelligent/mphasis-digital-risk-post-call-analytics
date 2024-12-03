@@ -7,8 +7,8 @@ Parameters:
   BulkUploadBucketName:
     Type: String
     Description: >-
-      (Optional) Existing bucket where files can be dropped, and a secondary Step Function can be 
-      manually enabled to drip feed them into the system. 
+      (Optional) Existing bucket where files can be dropped, and a secondary Step Function can be
+      manually enabled to drip feed them into the system.
       Leave blank to automatically create new bucket.
 
   BulkUploadMaxDripRate:
@@ -33,14 +33,14 @@ Parameters:
       - 'ANTHROPIC'
       - 'LAMBDA'
     Description: >
-      Set to enable call summarization by a Large Language Model. 
-      The BEDROCK+TCA will use Transcribe Call Analytics for summarization and Bedrock for other analytics. 
+      Set to enable call summarization by a Large Language Model.
+      The BEDROCK+TCA will use Transcribe Call Analytics for summarization and Bedrock for other analytics.
       The BEDROCK option requires you to choose one of the supported model IDs from the provided list (SummarizationBedrockModelId).
       You must also accept access to that model in the Amazon Bedrock > Model Access console.
       The TCA-ONLY option will not use Bedrock, but will only use Transcribe Call Analytics summarization.
-      The SAGEMAKER option uses a SageMaker endpoint with the pretrained bart-large-cnn-samsum model with a ml.m5.xlarge instance type.  
-      The LAMBDA option requires you to provide a function ARN below. 
-      The ANTHROPIC option is a third party service, and you must enter your Anthropic API key in the Third Party LLM API Key section. 
+      The SAGEMAKER option uses a SageMaker endpoint with the pretrained bart-large-cnn-samsum model with a ml.m5.xlarge instance type.
+      The LAMBDA option requires you to provide a function ARN below.
+      The ANTHROPIC option is a third party service, and you must enter your Anthropic API key in the Third Party LLM API Key section.
 
   ComprehendLanguages:
     Type: String
@@ -90,7 +90,7 @@ Parameters:
   InputBucketName:
     Type: String
     Description: >-
-      (Optional) Existing bucket holding all audio files for the system. 
+      (Optional) Existing bucket holding all audio files for the system.
       Leave blank to automatically create new bucket.
 
   InputBucketRawAudio:
@@ -123,14 +123,14 @@ Parameters:
   OutputBucketName:
     Type: String
     Description: >-
-      (Optional) Existing bucket where Transcribe output files are delivered. 
+      (Optional) Existing bucket where Transcribe output files are delivered.
       Leave blank to automatically create new bucket.
 
   OutputBucketTranscribeResults:
     Type: String
     Default: transcribeResults
     Description: Folder within the output S3 bucket where Transcribe results are written
-    
+
   OutputBucketParsedResults:
     Type: String
     Default: parsedFiles
@@ -161,8 +161,8 @@ Parameters:
   SupportFilesBucketName:
     Type: String
     Description: >-
-      (Optional) Existing bucket that hold supporting files, such as the 
-      file-based entity recognition mapping files. 
+      (Optional) Existing bucket that hold supporting files, such as the
+      file-based entity recognition mapping files.
       Leave blank to automatically create new bucket.
 
   TranscribeApiMode:
@@ -222,8 +222,8 @@ Parameters:
     Type: String
     Default: '(\d{4})-(\d{2})-(\d{2})T(\d{2})-(\d{2})-(\d{2})'
     Description: >
-      Regular Expression (regex) used to parse call Date/Time from audio filenames. 
-      Each datetime field (year, month, etc.) must be matched using a separate parenthesized group in the regex. 
+      Regular Expression (regex) used to parse call Date/Time from audio filenames.
+      Each datetime field (year, month, etc.) must be matched using a separate parenthesized group in the regex.
       Example: the regex '(\d{4})-(\d{2})-(\d{2})T(\d{2})-(\d{2})-(\d{2})' parses
       the filename: CallAudioFile-2021-12-01T07-55-51.wav into a value list: [2021, 12, 01, 07, 55, 51]
       The next parameter, FilenameDatetimeFieldMap, maps the values to datetime field codes.
@@ -233,55 +233,68 @@ Parameters:
     Type: String
     Default: '%Y %m %d %H %M %S'
     Description: >
-      Space separated ordered sequence of time field codes as used by Python's datetime.strptime() function. 
-      Each field code refers to a corresponding value parsed by the regex parameter filenameTimestampRegex. 
+      Space separated ordered sequence of time field codes as used by Python's datetime.strptime() function.
+      Each field code refers to a corresponding value parsed by the regex parameter filenameTimestampRegex.
       Example: the mapping '%Y %m %d %H %M %S' assembles the regex output values [2021, 12, 01, 07, 55, 51]
-      into the full datetime: '2021-12-01 07:55:51'.  
+      into the full datetime: '2021-12-01 07:55:51'.
       If the field map doesn't match the value list parsed by the regex, then the current time is used as the call timestamp.
 
   FilenameGUIDRegex:
     Type: String
     Default: '_GUID_(.*?)_'
     Description: >
-      Regular Expression (regex) used to parse call GUID from audio filenames. 
-      The GUID value must be matched using a parenthesized group in the regex. 
+      Regular Expression (regex) used to parse call GUID from audio filenames.
+      The GUID value must be matched using a parenthesized group in the regex.
       Example: the regex '_GUID_(.*?)_' parses
-      the filename: AutoRepairs1_CUST_12345_GUID_2a602c1a-4ca3-4d37-a933-444d575c0222_AGENT_BobS_DATETIME_07.55.51.067-09-16-2021.wav 
+      the filename: AutoRepairs1_CUST_12345_GUID_2a602c1a-4ca3-4d37-a933-444d575c0222_AGENT_BobS_DATETIME_07.55.51.067-09-16-2021.wav
       to extract the GUID value '2a602c1a-4ca3-4d37-a933-444d575c0222'.
 
   FilenameAgentRegex:
     Type: String
     Default: '_AGENT_(.*?)_'
     Description: >
-      Regular Expression (regex) used to parse call AGENT from audio filenames. 
-      The AGENT value must be matched using a parenthesized group in the regex. 
+      Regular Expression (regex) used to parse call AGENT from audio filenames.
+      The AGENT value must be matched using a parenthesized group in the regex.
       Example: the regex '_AGENT_(.*?)_' parses
-      the filename: AutoRepairs1_CUST_12345_GUID_2a602c1a-4ca3-4d37-a933-444d575c0222_AGENT_BobS_DATETIME_07.55.51.067-09-16-2021.wav 
-      to extract the AGENT value 'BobS'.  
-      
+      the filename: AutoRepairs1_CUST_12345_GUID_2a602c1a-4ca3-4d37-a933-444d575c0222_AGENT_BobS_DATETIME_07.55.51.067-09-16-2021.wav
+      to extract the AGENT value 'BobS'.
+
   FilenameCustRegex:
     Type: String
     Default: '_CUST_(.*?)_'
     Description: >
-      Regular Expression (regex) used to parse Customer from audio filenames. 
-      The customer id value must be matched using one or more parenthesized groups in the regex. 
+      Regular Expression (regex) used to parse Customer from audio filenames.
+      The customer id value must be matched using one or more parenthesized groups in the regex.
       Example: the regex '_CUST_(.*?)_' parses
-      the filename: AutoRepairs1_CUST_12345_GUID_2a602c1a-4ca3-4d37-a933-444d575c0222_AGENT_BobS_DATETIME_07.55.51.067-09-16-2021.wav 
+      the filename: AutoRepairs1_CUST_12345_GUID_2a602c1a-4ca3-4d37-a933-444d575c0222_AGENT_BobS_DATETIME_07.55.51.067-09-16-2021.wav
       to extract the Customer value '12345'.
 
   KendraIndexId:
     Type: String
-    Description: Kendra Index ID, or empty string if call transcription indexing is not enabled 
-    
+    Description: Kendra Index ID, or empty string if call transcription indexing is not enabled
+
   #WebUri:
   #  Type: String
   #  Description: PCA Web Application URI
-    
+
   DatabaseName:
     Type: String
     Default: 'pca'
     Description: Glue catalog database name used to contain tables/views for SQL integration.
-      
+
+  PCAVersion:
+    Type: String
+    Description: PCA Version from VERSION file
+
+  PreloadBucketName:
+    Type: String
+    Description: Bucket where where audio files are pre-delivered, i.e. SFTP destination
+
+  PreloadObjectKeyRegex:
+    Type: String
+    Description: Regular expression for files to be processed upon event in preload bucket
+    Default: '.'
+
 Resources:
   BulkUploadBucketParameter:
     Type: "AWS::SSM::Parameter"
@@ -313,7 +326,7 @@ Resources:
       Name: CallSummarization
       Type: String
       Description: >-
-        What type of call summarization to use. 
+        What type of call summarization to use.
       Value: !Ref CallSummarization
 
   ComprehendLanguagesParameter:
@@ -452,7 +465,7 @@ Resources:
       Name: OutputBucketTranscribeResults
       Type: String
       Description: Folder within the output S3 bucket where Transcribe results are written
-      Value: !Ref OutputBucketTranscribeResults  
+      Value: !Ref OutputBucketTranscribeResults
 
   OutputBucketParsedResultsParameter:
     Type: "AWS::SSM::Parameter"
@@ -493,7 +506,7 @@ Resources:
       Type: String
       Description: Name of Step Functions workflow that orchestrates the bulk import process
       Value: !Ref BulkUploadStepFunctionName
-      
+
   SupportFilesBucketNameParameter:
     Type: "AWS::SSM::Parameter"
     Properties:
@@ -592,8 +605,8 @@ Resources:
       Type: String
       Value: !Ref FilenameDatetimeRegex
       Description: >
-        Regular Expression (regex) used to parse call Date/Time from audio filenames. 
-        Each datetime field (year, month, etc.) must be matched using a separate parenthesized group in the regex. 
+        Regular Expression (regex) used to parse call Date/Time from audio filenames.
+        Each datetime field (year, month, etc.) must be matched using a separate parenthesized group in the regex.
         Example: the regex '(\d{2}).(\d{2}).(\d{2}).(\d{3})-(\d{2})-(\d{2})-(\d{4})' parses
         the filename: CallAudioFile-09.25.51.067-09-26-2019.wav into a value list: [09, 25, 51, 067, 09, 26, 2019]
         The next parameter, FilenameDatetimeFieldMap, maps the values to datetime field codes.
@@ -606,10 +619,10 @@ Resources:
       Type: String
       Value: !Ref FilenameDatetimeFieldMap
       Description: >
-        Space separated ordered sequence of time field codes as used by Python's datetime.strptime() function. 
-        Each field code refers to a corresponding value parsed by the regex parameter filenameTimestampRegex. 
+        Space separated ordered sequence of time field codes as used by Python's datetime.strptime() function.
+        Each field code refers to a corresponding value parsed by the regex parameter filenameTimestampRegex.
         Example: the mapping '%H %M %S %f %m %d %Y' assembles the regex output values [09, 25, 51, 067, 09, 26, 2019]
-        into the full datetime: '2019-09-26 09:25:51.067000'.  
+        into the full datetime: '2019-09-26 09:25:51.067000'.
         If the field map doesn't match the value list parsed by the regex, then the current time is used as the call timestamp.
 
   FilenameGUIDRegexParameter:
@@ -619,10 +632,10 @@ Resources:
       Type: String
       Value: !Ref FilenameGUIDRegex
       Description: >
-        Regular Expression (regex) used to parse call GUID from audio filenames. 
-        The GUID value must be matched using one or more parenthesized groups in the regex. 
+        Regular Expression (regex) used to parse call GUID from audio filenames.
+        The GUID value must be matched using one or more parenthesized groups in the regex.
         Example: the regex '_GUID_(.*?)_' parses
-        the filename: AutoRepairs1_CUST_12345_GUID_2a602c1a-4ca3-4d37-a933-444d575c0222_AGENT_BobS_DATETIME_07.55.51.067-09-16-2021.wav 
+        the filename: AutoRepairs1_CUST_12345_GUID_2a602c1a-4ca3-4d37-a933-444d575c0222_AGENT_BobS_DATETIME_07.55.51.067-09-16-2021.wav
         to extract the GUID value '2a602c1a-4ca3-4d37-a933-444d575c0222'.
 
   FilenameAgentRegexParameter:
@@ -632,10 +645,10 @@ Resources:
       Type: String
       Value: !Ref FilenameAgentRegex
       Description: >
-        Regular Expression (regex) used to parse call AGENT from audio filenames. 
-        The AGENT value must be matched using one or more parenthesized groups in the regex. 
+        Regular Expression (regex) used to parse call AGENT from audio filenames.
+        The AGENT value must be matched using one or more parenthesized groups in the regex.
         Example: the regex '_AGENT_(.*?)_' parses
-        the filename: AutoRepairs1_CUST_12345_GUID_2a602c1a-4ca3-4d37-a933-444d575c0222_AGENT_BobS_DATETIME_07.55.51.067-09-16-2021.wav 
+        the filename: AutoRepairs1_CUST_12345_GUID_2a602c1a-4ca3-4d37-a933-444d575c0222_AGENT_BobS_DATETIME_07.55.51.067-09-16-2021.wav
         to extract the AGENT value 'BobS'.
 
   FilenameCustRegexParameter:
@@ -645,10 +658,10 @@ Resources:
       Type: String
       Value: !Ref FilenameCustRegex
       Description: >
-        Regular Expression (regex) used to parse Customer from audio filenames. 
-        The customer id value must be matched using one or more parenthesized groups in the regex. 
+        Regular Expression (regex) used to parse Customer from audio filenames.
+        The customer id value must be matched using one or more parenthesized groups in the regex.
         Example: the regex '_CUST_(.*?)_' parses
-        the filename: AutoRepairs1_CUST_12345_GUID_2a602c1a-4ca3-4d37-a933-444d575c0222_AGENT_BobS_DATETIME_07.55.51.067-09-16-2021.wav 
+        the filename: AutoRepairs1_CUST_12345_GUID_2a602c1a-4ca3-4d37-a933-444d575c0222_AGENT_BobS_DATETIME_07.55.51.067-09-16-2021.wav
         to extract the Customer value '12345'.
 
   KendraIndexIdParameter:
@@ -658,7 +671,7 @@ Resources:
       Type: String
       Value: !Ref KendraIndexId
       Description: Kendra Index ID, or empty string if call transcription indexing is not enabled
-      
+
   #WebUriParameter:
   #  Type: "AWS::SSM::Parameter"
   #  Properties:
@@ -674,3 +687,28 @@ Resources:
       Type: String
       Value: !Ref DatabaseName
       Description: PCA Glue catalog database name
+
+  PCAVersionParameter:
+    Type: "AWS::SSM::Parameter"
+    Properties:
+      Name: PCAVersion
+      Type: String
+      Value: !Ref PCAVersion
+      Description: PCA Version
+
+  PreloadBucketNameParameter:
+    Type: "AWS::SSM::Parameter"
+    Properties:
+      Name: PreloadBucketName
+      Type: String
+      Description: Bucket where where audio files are pre-delivered, i.e. SFTP destination
+      Value: !Ref PreloadBucketName
+
+  PreloadObjectKeyRegexParameter:
+    Type: "AWS::SSM::Parameter"
+    Properties:
+      Name: PreloadObjectKeyRegex
+      Type: String
+      Description: Regular expression for files to be processed upon event in preload bucket
+      Value: !Ref PreloadObjectKeyRegex
+

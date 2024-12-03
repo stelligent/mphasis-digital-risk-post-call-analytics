@@ -4,15 +4,33 @@ Description: Amazon Transcribe Post Call Analytics - PCA (v0.7.11) (uksb-1sn29lk
 
 Parameters:
 
+  PCAVersion:
+    Type: String
+    Description: (Required) PCA Version from VERSION file
+
+  PreloadBucketName:
+    Type: String
+    Description: Bucket where where audio files are pre-delivered, i.e. SFTP destination
+
+  PreloadObjectKeyRegex:
+    Type: String
+    Description: Regular expression for files to be processed upon event in preload bucket
+    Default: ''
+
+  PyZipName:
+    Type: String
+    Default: python-utils-layer-v3.zip
+
+
   AdminUsername:
     Type: String
     Default: "admin"
     Description: (Required) Username for admin user
-    
+
   AdminEmail:
       Type: String
       Description: >-
-        (Required) Email address for the admin user. Will be used for logging in and for setting the admin password. 
+        (Required) Email address for the admin user. Will be used for logging in and for setting the admin password.
         This email will receive the temporary password for the admin user.
       AllowedPattern: ".+\\@.+\\..+"
       ConstraintDescription: Must be valid email address eg. johndoe@example.com
@@ -22,7 +40,7 @@ Parameters:
     Default: ""
     Description: >-
       Email address domain (example.com) or comma separated list of email domains  (example1.com,
-      example2.com) allowed to signin and signup using the web UI. To allow signup from any domain, 
+      example2.com) allowed to signin and signup using the web UI. To allow signup from any domain,
       enter *.
       If left empty, signup via the web UI is disabled and users will have to be created
       using
@@ -33,8 +51,8 @@ Parameters:
     Type: String
     Default: ""
     Description: >-
-      (Optional) Existing bucket where files can be dropped, and a secondary Step Function can be 
-      manually enabled to drip feed them into the system. 
+      (Optional) Existing bucket where files can be dropped, and a secondary Step Function can be
+      manually enabled to drip feed them into the system.
       Leave blank to automatically create new bucket.
 
   BulkUploadMaxDripRate:
@@ -97,7 +115,7 @@ Parameters:
     Type: String
     Default: ""
     Description: >-
-      (Optional) Existing bucket holding all audio files for the system. 
+      (Optional) Existing bucket holding all audio files for the system.
       Leave blank to automatically create new bucket with intelligent tiering storage and automated retention policy.
 
   InputBucketRawAudio:
@@ -131,7 +149,7 @@ Parameters:
     Type: String
     Default: ""
     Description: >-
-      (Optional) Existing bucket where Transcribe output files are delivered. 
+      (Optional) Existing bucket where Transcribe output files are delivered.
       Leave blank to automatically create new bucket with intelligent tiering storage and automated retention policy.
 
   OutputBucketTranscribeResults:
@@ -165,13 +183,13 @@ Parameters:
     AllowedPattern: "[-_a-zA-Z0-9]*"
     Default: PostCallAnalyticsWorkflow
     Description: Name of Step Functions workflow that orchestrates this process
-    
+
   BulkUploadStepFunctionName:
     Type: String
     AllowedPattern: "[-_a-zA-Z0-9]*"
     Default: BulkUploadWorkflow
     Description: Name of Step Functions workflow that orchestrates the bulk import process
-    
+
   SupportFilesBucketName:
     Type: String
     Default: ''
@@ -259,13 +277,13 @@ Parameters:
         - true
         - false
     Description: Set to true to automatically ingest sample audio files.
-    
+
   FilenameDatetimeRegex:
     Type: String
     Default: '(\d{4})-(\d{2})-(\d{2})T(\d{2})-(\d{2})-(\d{2})'
     Description: >
-      Regular Expression (regex) used to parse call Date/Time from audio filenames. 
-      Each datetime field (year, month, etc.) must be matched using a separate parenthesized group in the regex. 
+      Regular Expression (regex) used to parse call Date/Time from audio filenames.
+      Each datetime field (year, month, etc.) must be matched using a separate parenthesized group in the regex.
       Example: the regex '(\d{4})-(\d{2})-(\d{2})T(\d{2})-(\d{2})-(\d{2})' parses
       the filename: CallAudioFile-2021-12-01T07-55-51.wav into a value list: [2021, 12, 01, 07, 55, 51]
       The next parameter, FilenameDatetimeFieldMap, maps the values to datetime field codes.
@@ -275,40 +293,40 @@ Parameters:
     Type: String
     Default: '%Y %m %d %H %M %S'
     Description: >
-      Space separated ordered sequence of time field codes as used by Python's datetime.strptime() function. 
-      Each field code refers to a corresponding value parsed by the regex parameter filenameTimestampRegex. 
+      Space separated ordered sequence of time field codes as used by Python's datetime.strptime() function.
+      Each field code refers to a corresponding value parsed by the regex parameter filenameTimestampRegex.
       Example: the mapping '%Y %m %d %H %M %S' assembles the regex output values [2021, 12, 01, 07, 55, 51]
-      into the full datetime: '2021-12-01 07:55:51'.  
+      into the full datetime: '2021-12-01 07:55:51'.
       If the field map doesn't match the value list parsed by the regex, then the current time is used as the call timestamp.
 
   FilenameGUIDRegex:
     Type: String
     Default: '_GUID_(.*?)_'
     Description: >
-      Regular Expression (regex) used to parse call GUID from audio filenames. 
-      The GUID value must be matched using one or more parenthesized groups in the regex. 
+      Regular Expression (regex) used to parse call GUID from audio filenames.
+      The GUID value must be matched using one or more parenthesized groups in the regex.
       Example: the regex '_GUID_(.*?)_' parses
-      the filename: AutoRepairs1_CUST_12345_GUID_2a602c1a-4ca3-4d37-a933-444d575c0222_AGENT_BobS_DATETIME_07.55.51.067-09-16-2021.wav 
+      the filename: AutoRepairs1_CUST_12345_GUID_2a602c1a-4ca3-4d37-a933-444d575c0222_AGENT_BobS_DATETIME_07.55.51.067-09-16-2021.wav
       to extract the GUID value '2a602c1a-4ca3-4d37-a933-444d575c0222'.
 
   FilenameAgentRegex:
     Type: String
     Default: '_AGENT_(.*?)_'
     Description: >
-      Regular Expression (regex) used to parse call AGENT from audio filenames. 
-      The AGENT value must be matched using one or more parenthesized groups in the regex. 
+      Regular Expression (regex) used to parse call AGENT from audio filenames.
+      The AGENT value must be matched using one or more parenthesized groups in the regex.
       Example: the regex '_AGENT_(.*?)_' parses
-      the filename: AutoRepairs1_CUST_12345_GUID_2a602c1a-4ca3-4d37-a933-444d575c0222_AGENT_BobS_DATETIME_07.55.51.067-09-16-2021.wav 
-      to extract the AGENT value 'BobS'. 
-  
+      the filename: AutoRepairs1_CUST_12345_GUID_2a602c1a-4ca3-4d37-a933-444d575c0222_AGENT_BobS_DATETIME_07.55.51.067-09-16-2021.wav
+      to extract the AGENT value 'BobS'.
+
   FilenameCustRegex:
     Type: String
     Default: '_CUST_(.*?)_'
     Description: >
-      Regular Expression (regex) used to parse Customer from audio filenames. 
-      The customer id value must be matched using one or more parenthesized groups in the regex. 
+      Regular Expression (regex) used to parse Customer from audio filenames.
+      The customer id value must be matched using one or more parenthesized groups in the regex.
       Example: the regex '_CUST_(.*?)_' parses
-      the filename: AutoRepairs1_CUST_12345_GUID_2a602c1a-4ca3-4d37-a933-444d575c0222_AGENT_BobS_DATETIME_07.55.51.067-09-16-2021.wav 
+      the filename: AutoRepairs1_CUST_12345_GUID_2a602c1a-4ca3-4d37-a933-444d575c0222_AGENT_BobS_DATETIME_07.55.51.067-09-16-2021.wav
       to extract the Customer value '12345'.
 
   EnableGui:
@@ -318,7 +336,7 @@ Parameters:
         - "true"
         - "false"
     Description: Optionally disable the web GUI that comes with this solution, to deploy server components only.
-  
+
   EnableTranscriptKendraSearch:
     Type: String
     Default: 'No'
@@ -334,8 +352,8 @@ Parameters:
     MinValue: 0
     MaxValue: 100
     Description: >
-      When Kendra Index (Enterprise Edition) is enabled, the amount of extra query capacity for an index 
-      and GetQuerySuggestions capacity. A single extra capacity unit for an index provides 0.1 queries 
+      When Kendra Index (Enterprise Edition) is enabled, the amount of extra query capacity for an index
+      and GetQuerySuggestions capacity. A single extra capacity unit for an index provides 0.1 queries
       per second or approximately 8,000 queries per day. You can add up to 100 extra capacity units.
 
   StorageCapacityUnits:
@@ -344,8 +362,8 @@ Parameters:
     MinValue: 0
     MaxValue: 100
     Description: >
-      When Kendra Index (Enterprise Edition) is enabled, the amount of extra storage capacity for an index. 
-      A single capacity unit provides 30 GB of storage space or 100,000 documents, whichever is reached 
+      When Kendra Index (Enterprise Edition) is enabled, the amount of extra storage capacity for an index.
+      A single capacity unit provides 30 GB of storage space or 100,000 documents, whichever is reached
       first. You can add up to 100 extra capacity units.
 
   QueryCapacityUnits:
@@ -354,8 +372,8 @@ Parameters:
     MinValue: 0
     MaxValue: 100
     Description: >
-      When Kendra Index (Enterprise Edition) is enabled, the amount of extra query capacity for an index 
-      and GetQuerySuggestions capacity. A single extra capacity unit for an index provides 0.1 queries 
+      When Kendra Index (Enterprise Edition) is enabled, the amount of extra query capacity for an index
+      and GetQuerySuggestions capacity. A single extra capacity unit for an index provides 0.1 queries
       per second or approximately 8,000 queries per day. You can add up to 100 extra capacity units.
 
   StorageCapacityUnits:
@@ -364,8 +382,8 @@ Parameters:
     MinValue: 0
     MaxValue: 100
     Description: >
-      When Kendra Index (Enterprise Edition) is enabled, the amount of extra storage capacity for an index. 
-      A single capacity unit provides 30 GB of storage space or 100,000 documents, whichever is reached 
+      When Kendra Index (Enterprise Edition) is enabled, the amount of extra storage capacity for an index.
+      A single capacity unit provides 30 GB of storage space or 100,000 documents, whichever is reached
       first. You can add up to 100 extra capacity units.
 
   RetentionDays:
@@ -380,7 +398,7 @@ Parameters:
       - 730
       - 1460
     Description: >
-      When using auto-provisioned S3 buckets, your audio files and associated call analysis data will be 
+      When using auto-provisioned S3 buckets, your audio files and associated call analysis data will be
       automatically and permanently deleted after the specified number of retention days. The application
       does not currently archive recordings or call data.
 
@@ -392,7 +410,7 @@ Parameters:
       - TEST
       - PROD
     Default: PROD
-    
+
   DatabaseName:
     Type: String
     Default: 'pca'
@@ -405,8 +423,8 @@ Parameters:
         - 'No'
         - 'Yes'
     Description: >
-      Optionally deploy advanced analytics pipeline and Amazon QuickSight dashboards. 
-      IMPORTANT: Your Amazon QuickSight account MUST be enabled before deploying this stack. See http://www.amazon.com/pca-dashboards for additional 
+      Optionally deploy advanced analytics pipeline and Amazon QuickSight dashboards.
+      IMPORTANT: Your Amazon QuickSight account MUST be enabled before deploying this stack. See http://www.amazon.com/pca-dashboards for additional
       steps required in Amazon QuickSight to (1) enable S3 access to PCA OutputBucket and (2) share dashboard and analytics assets.
 
   GenAIQuery:
@@ -417,10 +435,10 @@ Parameters:
       - 'BEDROCK'
       - 'ANTHROPIC'
     Description: >
-      If enabled, gives the ability to query an individual call for information. 
+      If enabled, gives the ability to query an individual call for information.
       The BEDROCK option requires you to choose one of the supported model IDs from the provided list (GenAIQueryBedrockModelId).
       You must also accept access to that model in the Amazon Bedrock > Model Access console.
-      The ANTHROPIC option is a third party service, and you must enter your Anthropic API key in the 
+      The ANTHROPIC option is a third party service, and you must enter your Anthropic API key in the
       Third Party LLM API Key section.
 
   GenAIQueryBedrockModelId:
@@ -447,14 +465,14 @@ Parameters:
       - 'ANTHROPIC'
       - 'LAMBDA'
     Description: >
-      Set to enable call summarization by a Large Language Model. 
+      Set to enable call summarization by a Large Language Model.
       The BEDROCK+TCA will use Transcribe Call Analytics for summarization and Bedrock for other analytics, and is available only for English.
       The BEDROCK option requires you to choose one of the supported model IDs from the provided list (SummarizationBedrockModelId).
       You must also accept access to that model in the Amazon Bedrock > Model Access console.
       The TCA-ONLY option will not use Bedrock, but will only use Transcribe Call Analytics summarization, and is available only for English.
-      The SAGEMAKER option uses a SageMaker endpoint with the pretrained bart-large-cnn-samsum model with a ml.m5.xlarge instance type.  
-      The LAMBDA option requires you to provide a function ARN below. 
-      The ANTHROPIC option is a third party service, and you must enter your Anthropic API key in the Third Party LLM API Key section. 
+      The SAGEMAKER option uses a SageMaker endpoint with the pretrained bart-large-cnn-samsum model with a ml.m5.xlarge instance type.
+      The LAMBDA option requires you to provide a function ARN below.
+      The ANTHROPIC option is a third party service, and you must enter your Anthropic API key in the Third Party LLM API Key section.
 
   SummarizationBedrockModelId:
     Type: String
@@ -466,7 +484,7 @@ Parameters:
       - anthropic.claude-v1
       - anthropic.claude-instant-v1
       - anthropic.claude-v2
-    Description: (Optional) If 'CallSummarization' is BEDROCK, which Bedrock model to use. 
+    Description: (Optional) If 'CallSummarization' is BEDROCK, which Bedrock model to use.
 
   TestBedrockModelId:
     Type: String
@@ -475,7 +493,7 @@ Parameters:
         - true
         - false
     Description: >
-      Set to false to disable checking if the Bedrock models are enabled. 
+      Set to false to disable checking if the Bedrock models are enabled.
 
   SummarizationSageMakerInitialInstanceCount:
     Type: Number
@@ -521,7 +539,7 @@ Metadata:
               Parameters:
                 - CallSummarization
                 - SummarizationBedrockModelId
-                - SummarizationSageMakerInitialInstanceCount 
+                - SummarizationSageMakerInitialInstanceCount
                 - SummarizationLambdaFunctionArn
             - Label:
                 default: Third Party LLM API Key
@@ -607,8 +625,15 @@ Metadata:
                 - ConversationLocation
                 - Environment
                 - StepFunctionName
-                - ffmpegDownloadUrl 
+                - ffmpegDownloadUrl
                 - TestBedrockModelId
+            - Label:
+                default: Digital Risk Enhancements
+              Parameters:
+                - PCAVersion
+                - PreloadBucketName
+                - PreloadObjectKeyRegex
+                - PyZipName
 
 Conditions:
   ShouldCreateBulkUploadBucket: !Equals [!Ref BulkUploadBucketName, '']
@@ -621,29 +646,29 @@ Conditions:
   ShouldDeployPcaDashboards: !Equals [!Ref EnablePcaDashboards, 'Yes']
   ShouldLoadSampleFiles: !Equals [!Ref loadSampleAudioFiles, 'true']
   ShouldDeployBedrockBoto3Layer: !Or [
-    !Equals [!Ref CallSummarization, 'BEDROCK'], 
-    !Equals [!Ref CallSummarization, 'BEDROCK+TCA'], 
-    !Equals [!Ref CallSummarization, 'TCA-ONLY'], 
+    !Equals [!Ref CallSummarization, 'BEDROCK'],
+    !Equals [!Ref CallSummarization, 'BEDROCK+TCA'],
+    !Equals [!Ref CallSummarization, 'TCA-ONLY'],
     !Equals [!Ref GenAIQuery, 'BEDROCK'],
   ]
   ShouldDeployLLMThirdPartyApiKey: !And [!Not [!Equals [!Ref SummarizationLLMThirdPartyApiKey, '']], !Not [!Equals [!Ref SummarizationLLMThirdPartyApiKey, undefined]]]
   ShouldTestBedrockModelId: !And [
     !Or [
-      !Equals [!Ref CallSummarization, 'BEDROCK'], 
+      !Equals [!Ref CallSummarization, 'BEDROCK'],
       !Equals [!Ref CallSummarization, "BEDROCK+TCA"],
       !Equals [!Ref GenAIQuery, 'BEDROCK'],
-    ], 
+    ],
     !Equals [!Ref TestBedrockModelId, 'true']
   ]
   ShouldTestGenAIQueryBedrockModelId: !And [
-    !Equals [!Ref GenAIQuery, 'BEDROCK'], 
+    !Equals [!Ref GenAIQuery, 'BEDROCK'],
     !Equals [!Ref TestBedrockModelId, 'true']
   ]
   ShouldTestSummarizationBedrockModelId: !And [
     !Or [
       !Equals [!Ref CallSummarization, 'BEDROCK'],
       !Equals [!Ref CallSummarization, "BEDROCK+TCA"],
-    ], 
+    ],
     !Equals [!Ref TestBedrockModelId, 'true']
   ]
 
@@ -664,7 +689,7 @@ Resources:
     Condition: ShouldCreateBulkUploadBucket
     Type: 'AWS::S3::Bucket'
     DeletionPolicy: Retain
-    UpdateReplacePolicy: Retain 
+    UpdateReplacePolicy: Retain
     Properties:
       BucketEncryption:
         ServerSideEncryptionConfiguration:
@@ -675,8 +700,8 @@ Resources:
     Condition: ShouldCreateInputBucket
     Type: 'AWS::S3::Bucket'
     DeletionPolicy: Retain
-    UpdateReplacePolicy: Retain 
-    
+    UpdateReplacePolicy: Retain
+
     Properties:
       BucketEncryption:
         ServerSideEncryptionConfiguration:
@@ -695,7 +720,7 @@ Resources:
     Condition: ShouldCreateOutputBucket
     Type: 'AWS::S3::Bucket'
     DeletionPolicy: Retain
-    UpdateReplacePolicy: Retain 
+    UpdateReplacePolicy: Retain
     Properties:
       BucketEncryption:
         ServerSideEncryptionConfiguration:
@@ -714,7 +739,7 @@ Resources:
     Condition: ShouldCreateSupportFilesBucket
     Type: 'AWS::S3::Bucket'
     DeletionPolicy: Retain
-    UpdateReplacePolicy: Retain 
+    UpdateReplacePolicy: Retain
     Properties:
       BucketEncryption:
         ServerSideEncryptionConfiguration:
@@ -761,7 +786,7 @@ Resources:
                   - 'arn:aws:logs:${region}:${account}:log-group:/aws/kendra/*:log-stream:*'
                   - region: !Ref 'AWS::Region'
                     account: !Ref 'AWS::AccountId'
-                Action: 
+                Action:
                   - 'logs:DescribeLogStreams'
                   - 'logs:CreateLogStream'
                   - 'logs:PutLogEvents'
@@ -771,7 +796,7 @@ Resources:
     Type: 'AWS::Kendra::Index'
     Condition: ShouldEnableKendraSearch
     Properties:
-      CapacityUnits: !If 
+      CapacityUnits: !If
           - ShouldCreateKendraIndexDeveloperEdition
           - !Ref AWS::NoValue
           -
@@ -790,18 +815,18 @@ Resources:
       RoleArn: !GetAtt KendraIndexRole.Arn
       DocumentMetadataConfigurations:
         - Name: ANALYSIS_URI
-          Search: 
+          Search:
             Displayable: true
           Type: 'STRING_VALUE'
         - Name: DATETIME
-          Search: 
+          Search:
             Displayable: true
             Facetable: true
           Relevance:
             Freshness: true
           Type: 'DATE_VALUE'
         - Name: GUID
-          Search: 
+          Search:
             Displayable: true
             Searchable: true
           Type: 'STRING_VALUE'
@@ -811,32 +836,32 @@ Resources:
             Facetable: true
           Type: 'STRING_VALUE'
         - Name: DURATION
-          Search: 
+          Search:
             Displayable: true
             Facetable: true
           Type: 'STRING_VALUE'
         - Name: ENTITY_PERSON
-          Search: 
+          Search:
             Displayable: true
             Facetable: true
-          Type: 'STRING_LIST_VALUE'        
+          Type: 'STRING_LIST_VALUE'
         - Name: ENTITY_LOCATION
-          Search: 
+          Search:
             Displayable: true
             Facetable: true
           Type: 'STRING_LIST_VALUE'
         - Name: ENTITY_ORGANIZATION
-          Search: 
+          Search:
             Displayable: true
             Facetable: true
           Type: 'STRING_LIST_VALUE'
         - Name: ENTITY_COMMERCIAL_ITEM
-          Search: 
+          Search:
             Displayable: true
             Facetable: true
           Type: 'STRING_LIST_VALUE'
         - Name: ENTITY_EVENT
-          Search: 
+          Search:
             Displayable: true
             Facetable: true
           Type: 'STRING_LIST_VALUE'
@@ -857,7 +882,7 @@ Resources:
           Type: 'STRING_LIST_VALUE'
 
   ########################################################
-  # If Bedrock Models are selected, verify that Bedrock 
+  # If Bedrock Models are selected, verify that Bedrock
   # is available in the region, and that models are enabled
   ########################################################
 
@@ -895,7 +920,7 @@ Resources:
       Runtime: python3.11
       Timeout: 60
       MemorySize: 128
-      Code: 
+      Code:
         ZipFile: !Sub |
           import cfnresponse
           import json
@@ -922,11 +947,11 @@ Resources:
                           "messages": [{"role": "user", "content": prompt}],
                           "anthropic_version": "bedrock-2023-05-31"
                       }
-                  else:    
+                  else:
                       request_body = {
                           "prompt": prompt,
                           "max_tokens_to_sample": DEFAULT_MAX_TOKENS
-                      } 
+                      }
 
                   request_body.update(parameters)
               elif provider == "ai21":
@@ -955,7 +980,7 @@ Resources:
                   if 'claude-3' in modelId:
                       response_raw = json.loads(response.get("body").read().decode())
                       generated_text = response_raw.get('content')[0].get('text')
-          
+
                   else:
                       response_body = json.loads(response.get("body").read().decode())
                       generated_text = response_body.get("completion")
@@ -996,11 +1021,11 @@ Resources:
                           "temperature": 0
                       }
                       print(f"Testing {modelId}")
-                      call_llm(parameters, prompt)            
+                      call_llm(parameters, prompt)
                   except Exception as e:
                       status = cfnresponse.FAILED
                       reason = f"Exception thrown testing ModelId='{modelId}'. Check that Amazon Bedrock is available in your region, and that model is activated in your Amazon Bedrock account - {e}"
-              print(f"Status: {status}, Reason: {reason}")        
+              print(f"Status: {status}, Reason: {reason}")
               cfnresponse.send(event, context, status, responseData, reason=reason)
 
   TestGenAIQueryBedrockModelId:
@@ -1048,28 +1073,28 @@ Resources:
         EntityTypes: !Ref EntityTypes
         InputBucketAudioPlayback: !Ref InputBucketAudioPlayback
         InputBucketFailedTranscriptions: !Ref InputBucketFailedTranscriptions
-        InputBucketName: 
+        InputBucketName:
           !If
           - ShouldCreateInputBucket
           - !Ref InputBucket
-          - !Ref InputBucketName        
+          - !Ref InputBucketName
         InputBucketRawAudio: !Ref InputBucketRawAudio
         InputBucketOrigTranscripts: !Ref InputBucketOrigTranscripts
         MaxSpeakers: !Ref MaxSpeakers
         MinSentimentNegative: !Ref MinSentimentNegative
         MinSentimentPositive: !Ref MinSentimentPositive
-        OutputBucketName: 
+        OutputBucketName:
           !If
           - ShouldCreateOutputBucket
           - !Ref OutputBucket
-          - !Ref OutputBucketName 
+          - !Ref OutputBucketName
         OutputBucketTranscribeResults: !Ref OutputBucketTranscribeResults
         OutputBucketParsedResults: !Ref OutputBucketParsedResults
         SpeakerNames: !Ref SpeakerNames
         SpeakerSeparationType: !Ref SpeakerSeparationType
         StepFunctionName: !Ref StepFunctionName
         BulkUploadStepFunctionName: !Ref BulkUploadStepFunctionName
-        SupportFilesBucketName: 
+        SupportFilesBucketName:
           !If
           - ShouldCreateSupportFilesBucket
           - !Ref SupportFilesBucket
@@ -1096,12 +1121,17 @@ Resources:
           - 'None'
         # WebUri: !GetAtt PCAUI.Outputs.WebUri
         DatabaseName: !Ref DatabaseName
+        PCAVersion: !Ref PCAVersion
+        PreloadBucketName: !Ref PreloadBucketName
+        PreloadObjectKeyRegex: !Ref PreloadObjectKeyRegex
 
   PythonUtilsLayer:
     DependsOn: SSM
     Type: AWS::CloudFormation::Stack
     Properties:
       TemplateURL: pca-server/cfn/lib/python-utilities.template
+      Parameters:
+        PyZipName: !Ref PyZipName
 
   BedrockBoto3Layer:
     Type: AWS::CloudFormation::Stack
@@ -1112,7 +1142,7 @@ Resources:
   LLMThirdPartyApiKeySecret:
     Condition: ShouldDeployLLMThirdPartyApiKey
     Type: AWS::SecretsManager::Secret
-    Properties: 
+    Properties:
       Description: API Key
       Name: !Sub '${AWS::StackName}-ThirdPartyApiKey'
       SecretString: !Ref SummarizationLLMThirdPartyApiKey
@@ -1132,7 +1162,7 @@ Resources:
         CallSummarization: !Ref CallSummarization
         SummarizationBedrockModelId: !Ref SummarizationBedrockModelId
         SummarizationSageMakerInitialInstanceCount: !Ref SummarizationSageMakerInitialInstanceCount
-        SummarizationLLMThirdPartyApiKey: !If 
+        SummarizationLLMThirdPartyApiKey: !If
           - ShouldDeployLLMThirdPartyApiKey
           - !Ref LLMThirdPartyApiKeySecret
           - ''
@@ -1158,7 +1188,7 @@ Resources:
           !If
           - ShouldCreateInputBucket
           - !Ref InputBucket
-          - !Ref InputBucketName 
+          - !Ref InputBucketName
         AudioBucketPrefix: !Ref InputBucketRawAudio
         DataBucket:
           !If
@@ -1172,7 +1202,7 @@ Resources:
         FetchTranscriptArn: !GetAtt PCAServer.Outputs.FetchTranscriptArn
         SummarizerArn: !GetAtt PCAServer.Outputs.SummarizerArn
         StepFunctionName: !Ref StepFunctionName
-        LLMThirdPartyApiKey: !If 
+        LLMThirdPartyApiKey: !If
           - ShouldDeployLLMThirdPartyApiKey
           - !Ref LLMThirdPartyApiKeySecret
           - ''
@@ -1205,7 +1235,7 @@ Resources:
       TemplateURL: build/pca-dashboards.yaml
       Parameters:
         PcaGlueCatalogDatabaseName: !Ref DatabaseName
-        PcaOutputBucket: 
+        PcaOutputBucket:
           !If
           - ShouldCreateOutputBucket
           - !Ref OutputBucket
@@ -1229,7 +1259,7 @@ Resources:
           - !Ref PcaDashboards
           - !Ref AWS::NoValue
 
-  # Custom resource to check that QuickSight has been enabled - if not, fail fast and prevent downstream failures  
+  # Custom resource to check that QuickSight has been enabled - if not, fail fast and prevent downstream failures
 
   QuickSightEnabledCheckFunctionRole:
     Type: "AWS::IAM::Role"
@@ -1260,7 +1290,7 @@ Resources:
       Handler: index.handler
       Runtime: python3.11
       Role: !GetAtt QuickSightEnabledCheckFunctionRole.Arn
-      Code: 
+      Code:
         ZipFile: !Sub |
           import cfnresponse
           import boto3
@@ -1280,7 +1310,7 @@ Resources:
                 reason = f"No Amazon QuickSight account. To deploy PCA with Dashboards enabled, you must first create an account in the Amazon QuickSight console => {e}"
             else:
               reason = f"Request type is {event['RequestType']} - skipping"
-            cfnresponse.send(event, context, status, {}, reason=reason) 
+            cfnresponse.send(event, context, status, {}, reason=reason)
 
   IsQuickSightEnabled:
     Type: Custom::QuickSightCheck
@@ -1304,8 +1334,8 @@ Outputs:
       !If
       - ShouldCreateInputBucket
       - !Ref InputBucket
-      - !Ref InputBucketName  
-    
+      - !Ref InputBucketName
+
   InputBucketPrefix:
     Description: S3 Bucket prefix/folder for uploading input audio files
     Value: !Ref InputBucketRawAudio
@@ -1313,7 +1343,7 @@ Outputs:
   InputBucketTranscriptPrefix:
     Description: S3 Bucket prefix/folder for uploading input transcripts
     Value: !Ref InputBucketOrigTranscripts
-  
+
   InputBucketPlaybackAudioPrefix:
     Description: S3 Bucket prefix/folder for audio used for playboack from browser
     Value: !Ref InputBucketAudioPlayback
@@ -1324,8 +1354,8 @@ Outputs:
       !If
       - ShouldCreateOutputBucket
       - !Ref OutputBucket
-      - !Ref OutputBucketName  
-    
+      - !Ref OutputBucketName
+
   OutputBucketPrefix:
     Description: S3 Bucket path where Transcribe output files are delivered
     Value: !Ref OutputBucketParsedResults
@@ -1336,8 +1366,8 @@ Outputs:
       !If
       - ShouldCreateSupportFilesBucket
       - !Ref SupportFilesBucket
-      - !Ref SupportFilesBucketName  
-    
+      - !Ref SupportFilesBucketName
+
   TranscriptionMediaSearchFinderURL:
     Description: Transcript Search Application link
     Value:
@@ -1345,7 +1375,7 @@ Outputs:
       - ShouldEnableKendraSearch
       - !GetAtt MediaSearchKendraFinder.Outputs.MediaSearchFinderURL
       - "Not enabled"
- 
+
   WebAppURL:
     Description: PCA Web Application link
     Value:
@@ -1353,7 +1383,7 @@ Outputs:
       - ShouldEnableGui
       - !GetAtt PCAUI.Outputs.WebUri
       - "PCA Web UI not enabled - stack param 'EnableGui'"
-    
+
   WebAdminUsername:
     Description: PCA admin user
     Value: !Ref AdminUsername
