@@ -25,18 +25,18 @@ Parameters:
   StepFunctionName:
     Type: AWS::SSM::Parameter::Value<String>
     Default: StepFunctionName
-    
+
   InputBucketName:
     Type: AWS::SSM::Parameter::Value<String>
     Default: InputBucketName
 
-  CallSummarization: 
+  CallSummarization:
     Type: String
     Default: 'DISABLED'
-  SummarizationSagemakerEndpointName: 
+  SummarizationSagemakerEndpointName:
     Type: String
     Default: ''
-  SummarizationSagemakerEndpointArn: 
+  SummarizationSagemakerEndpointArn:
     Type: String
     Default: ''
   SummarizationLLMThirdPartyApiKey:
@@ -44,7 +44,7 @@ Parameters:
     Description: >
       Secrets manager secret Arn containing the third party LLM API key
     Default: ''
-  SummarizationLambdaFunctionArn: 
+  SummarizationLambdaFunctionArn:
     Type: String
     Default: ''
   SummarizationBedrockModelId:
@@ -232,6 +232,20 @@ Resources:
         - arn:aws:iam::aws:policy/AmazonSSMReadOnlyAccess
         - arn:aws:iam::aws:policy/AmazonS3FullAccess
 
+  SFMitelMetadata:
+    Type: "AWS::Serverless::Function"
+    Properties:
+      CodeUri:  ../../src/pca
+      Handler: pca-aws-sf-mitel_metadata.lambda_handler
+      Layers:
+        - !Ref Boto3Layer
+      Environment:
+        Variables:
+          AWS_DATA_PATH: "/opt/models"
+      Policies:
+        - arn:aws:iam::aws:policy/AmazonSSMReadOnlyAccess
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+
   SFPostCTRProcessing:
     Type: "AWS::Serverless::Function"
     Properties:
@@ -245,7 +259,7 @@ Resources:
       Policies:
         - arn:aws:iam::aws:policy/AmazonSSMReadOnlyAccess
         - arn:aws:iam::aws:policy/AmazonS3FullAccess
-  
+
   SFFetchTranscript:
     Type: "AWS::Serverless::Function"
     Properties:
@@ -279,7 +293,7 @@ Resources:
           SUMMARY_LAMBDA_ARN: !Ref SummarizationLambdaFunctionArn
           ANTHROPIC_MODEL_IDENTIFIER: "claude-v1.3-100k"
           ANTHROPIC_ENDPOINT_URL: "https://api.anthropic.com/v1/complete"
-          TOKEN_COUNT: !If 
+          TOKEN_COUNT: !If
             - ProvisionedSageMakerEndpoint
             - 1024
             - 0
@@ -299,12 +313,12 @@ Resources:
               - 'dynamodb:GetItem'
           - Sid: InvokeBedrock
             Effect: Allow
-            Action: 
+            Action:
               - bedrock:InvokeModel
             Resource:
               - !Sub "arn:${AWS::Partition}:bedrock:*::foundation-model/*"
               - !Sub "arn:${AWS::Partition}:bedrock:*:${AWS::AccountId}:custom-model/*"
-          - !If 
+          - !If
             - HasAnthropicSummary
             - Sid: SecretsManagerPolicy
               Effect: Allow
@@ -315,7 +329,7 @@ Resources:
                 - 'secretsmanager:ListSecretVersionIds'
               Resource: !Ref SummarizationLLMThirdPartyApiKey
             - !Ref "AWS::NoValue"
-          - !If 
+          - !If
             - ProvisionedSageMakerEndpoint
             - Sid: InvokeSummarizer
               Effect: Allow
@@ -323,7 +337,7 @@ Resources:
                 - sagemaker:InvokeEndpoint
               Resource: !Ref SummarizationSagemakerEndpointArn
             - !Ref "AWS::NoValue"
-          - !If 
+          - !If
             - HasCustomSummarizerLambda
             - Sid: SummarizationLambda
               Effect: Allow
@@ -357,7 +371,7 @@ Resources:
 
   LogGroup:
     Type: AWS::Logs::LogGroup
-    Properties: 
+    Properties:
       LogGroupName: !Sub '/aws/vendedlogs/${StepFunctionName}'
       RetentionInDays: 90
 
@@ -385,6 +399,7 @@ Resources:
                   - !GetAtt SFTranscribeFailed.Arn
                   - !GetAtt SFFinalProcessing.Arn
                   - !GetAtt SFCTRGenesys.Arn
+                  - !GetAtt SFMitelMetadata.Arn
                   - !GetAtt SFPostCTRProcessing.Arn
                   - !GetAtt SFSummarize.Arn
         - PolicyName: CloudWatchLogs
@@ -416,6 +431,7 @@ Resources:
         SFTranscribeFailedArn: !GetAtt SFTranscribeFailed.Arn
         SFFinalProcessingArn: !GetAtt SFFinalProcessing.Arn
         SFCTRGenesysArn: !GetAtt SFCTRGenesys.Arn
+        SFMitelMetadataArn: !GetAtt SFMitelMetadata.Arn
         SFPostCTRProcessingArn: !GetAtt SFPostCTRProcessing.Arn
         SFSummarizeArn: !GetAtt SFSummarize.Arn
       LoggingConfiguration:
@@ -436,6 +452,7 @@ Outputs:
         - !Sub '"${SFProcessTurnRole.Arn}"'
         - !Sub '"${SFFinalProcessingRole.Arn}"'
         - !Sub '"${SFCTRGenesysRole.Arn}"'
+        - !Sub '"${SFMitelMetadataRole.Arn}"'
         - !Sub '"${SFTranscribeFailedRole.Arn}"'
         - !Sub '"${SFPostCTRProcessingRole.Arn}"'
 

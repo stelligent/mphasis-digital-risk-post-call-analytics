@@ -31,6 +31,22 @@ TMP_DIR = "/tmp/"
 INTERIM_RESULTS_KEY = "interimResults"
 
 
+class MitelMetadata:
+    def __init__(self):
+        self.metadata = {}
+
+    def parse_json_input(self, json_input):
+        # pass only conversation call summary injected by preloader
+        if "conversation" in json_input:
+            if "callSummary" in json_input["conversation"]:
+                self.metadata = json_input["conversation"]["callSummary"]
+        else:
+            self.metadata = json_input
+
+    def create_mitel_metadata_output(self):
+        # pass metadata along as-is
+        return self.metadata
+
 class SpeechSegment:
     """ Class to hold information about a single speech segment """
     def __init__(self):
@@ -339,6 +355,7 @@ class PCAResults:
     def __init__(self):
         self.speech_segments = []
         self.analytics = ConversationAnalytics()
+        self.mitel_metadata = MitelMetadata()
 
     def get_speaker_prefix(self, known_speaker):
         """
@@ -416,7 +433,9 @@ class PCAResults:
 
         # Generate the JSON output from our internal structures
         json_data = {"ConversationAnalytics": self.analytics.create_json_output(),
-                     "SpeechSegments": self.create_output_speech_segments()}
+                     "SpeechSegments": self.create_output_speech_segments(),
+                     "MitelMetadata": self.mitel_metadata.create_mitel_metadata_output()
+                    }
 
         # Write out the JSON data to the specified S3 location
         s3_resource = boto3.resource('s3')
@@ -479,6 +498,9 @@ class PCAResults:
 
         # First parse out the main analytics
         self.analytics.parse_json_input(json_data["ConversationAnalytics"])
+
+        if "MitelMetadata" in json_data:
+            self.mitel_metadata.parse_json_input(json_data["MitelMetadata"])
 
         # Loop around each defined segment in the JSON, and create a new data structure
         self.speech_segments = []

@@ -112,6 +112,11 @@
           "Variable": "$.telephony",
           "StringEquals": "genesys",
           "Next": "GenesysCTR"
+        },
+        {
+          "Variable": "$.telephony",
+          "StringEquals": "mitel",
+          "Next": "MitelMetadata"
         }
       ],
       "Default": "NoDefinedCTR"
@@ -130,6 +135,16 @@
       }],
       "Next": "PostCTRProcessing"
     },
+    "MitelMetadata": {
+      "Type": "Task",
+      "Comment": "Handle Mitel-specific Call Metadata files",
+      "Resource": "${SFMitelMetadataArn}",
+      "Retry": [{
+          "IntervalSeconds": 5,
+          "ErrorEquals": ["Lambda.Unknown"]
+      }],
+      "Next": "PostCTRProcessing"
+    },
     "PostCTRProcessing": {
       "Comment": "Performs post processing after the CTR step has been completed",
       "Type": "Task",
@@ -139,7 +154,7 @@
           "ErrorEquals": ["Lambda.Unknown"]
       }],
       "Next": "Summarize?"
-    }, 
+    },
     "Summarize?" : {
       "Type": "Choice",
       "Comment": "Do we have to summarize the call?",
