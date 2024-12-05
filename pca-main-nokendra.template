@@ -934,7 +934,7 @@ Resources:
           - ShouldEnableKendraSearch
           - 'None'
           - 'None'
-        # WebUri: !GetAtt PCAUI.Outputs.WebUri
+        # WebUri: !GetAtt PCADRUI.Outputs.WebUri
         DatabaseName: !Ref DatabaseName
         PCAVersion: !Ref PCAVersion
         PreloadBucketName: !Ref PreloadBucketName
@@ -989,11 +989,11 @@ Resources:
           - ''
         LLMTableName: !GetAtt LLMPromptConfigure.Outputs.LLMTableName
 
-  PCAUI:
+  PCADRUI:
     Type: AWS::CloudFormation::Stack
     Condition: ShouldEnableGui
     Properties:
-      TemplateURL: pca-ui/cfn/pca-ui.template
+      TemplateURL: pca-dr-ui/cfn/pca-dr-ui.template
       Parameters:
         AdminUsername: !Ref AdminUsername
         AdminEmail: !Ref AdminEmail
@@ -1043,7 +1043,7 @@ Resources:
         PcaWebAppCallPathPrefix: !Sub "dashboard/${OutputBucketParsedResults}/"
         PcaWebAppHostAddress: !If
           - ShouldEnableGui
-          - !Select [1, !Split ["//", !GetAtt PCAUI.Outputs.WebUri]]
+          - !Select [1, !Split ["//", !GetAtt PCADRUI.Outputs.WebUri]]
           - "pca.ui.bot.enabled"
 
   CopySamples:
@@ -1053,7 +1053,7 @@ Resources:
       TemplateURL: pca-samples/copy-samples.template
       Parameters:
         DependsOnPCAServer: !Ref PCAServer
-        DependsOnPCAUI: !If [ShouldEnableGui, !Ref PCAUI, !Ref AWS::NoValue]
+        DependsOnPCADRUI: !If [ShouldEnableGui, !Ref PCADRUI, !Ref AWS::NoValue]
         DependsOnPCADashboards: !If
           - ShouldDeployPcaDashboards
           - !Ref PcaDashboards
@@ -1181,7 +1181,7 @@ Outputs:
     Value:
       !If
       - ShouldEnableGui
-      - !GetAtt PCAUI.Outputs.WebUri
+      - !GetAtt PCADRUI.Outputs.WebUri
       - "PCA Web UI not enabled - stack param 'EnableGui'"
 
   WebAdminUsername:
@@ -1192,7 +1192,7 @@ Outputs:
     Description: When using KMS key to encrypt S3 input/output buckets, KMS key must grant access to these roles.
     Value: !Join
       - ', '
-      - - !If [ShouldEnableGui, !Sub '${PCAUI.Outputs.RolesForKMSKey}', !Ref AWS::NoValue]
+      - - !If [ShouldEnableGui, !Sub '${PCADRUI.Outputs.RolesForKMSKey}', !Ref AWS::NoValue]
         - !Sub '${PCAServer.Outputs.RolesForKMSKey}'
         - !If [ShouldLoadSampleFiles, !Sub '${CopySamples.Outputs.RolesForKMSKey}', !Ref AWS::NoValue]
 

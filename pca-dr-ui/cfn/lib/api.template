@@ -1,0 +1,382 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: Amazon Transcribe Post Call Analytics - PCA UI - Api
+
+Transform: AWS::Serverless-2016-10-31
+
+Parameters:
+  AudioBucket:
+    Type: String
+
+  AudioBucketPrefix:
+    Type: String
+
+  DataBucket:
+    Type: String
+
+  TableName:
+    Type: String
+
+  UserPoolId:
+    Type: String
+
+  GenAIQueryType:
+    Default: 'DISABLED'
+    Type: String
+    AllowedValues:
+      - 'DISABLED'
+      # - 'SAGEMAKER'
+      - 'BEDROCK'
+      - 'LAMBDA'
+      - 'ANTHROPIC'
+    Description: This is what model to use for GenAIQuery.
+  
+  GenAIQueryBedrockModelId:
+    Type: String
+    Default: anthropic.claude-3-haiku-20240307-v1:0
+    AllowedValues:
+      - anthropic.claude-3-haiku-20240307-v1:0
+      - anthropic.claude-3-sonnet-20240229-v1:0
+      - amazon.titan-text-express-v1
+      - anthropic.claude-v1
+      - anthropic.claude-instant-v1
+      - anthropic.claude-v2
+    Description: (Optional) If 'GenAIQuery' is BEDROCK, which Bedrock model to use. (Bedrock preview access only)
+
+  FetchTranscriptArn:
+    Type: String
+    AllowedPattern: '^(|arn:aws:lambda:.*)$'
+    Description: Arn to use for the GenAIQuery to fetch transcript
+
+  SummarizerArn:
+    Type: String
+    AllowedPattern: '^(|arn:aws:lambda:.*)$'
+    Description: Arn to use to refresh the GenAI Summaries
+
+  LLMThirdPartyApiKey:
+    Type: String
+    Description: >
+      Secrets manager secret Arn containing the third party LLM API key
+    Default: ''
+
+  Boto3LayerArn:
+    Default: ''
+    Type: String
+    Description: External Boto3 Layer Arn to use. If none is provided, one will be created automatically via boto3.template
+
+  PyUtilsLayerArn:
+    Type: String
+    Description: External PyUtils Layer Arn to use.
+
+  LLMTableName:
+    Type: String
+    Description: The DynamoDB table name where the summary and query prompt templates are stored.
+
+Conditions:
+  ShouldAddBoto3Layer: !Not [!Equals [!Ref Boto3LayerArn, '']]
+  HasAnthropicSummary: !Equals [!Ref GenAIQueryType, 'ANTHROPIC']
+
+Resources:
+  Api:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: Prod
+      Auth:
+        AddDefaultAuthorizerToCorsPreflight: False
+        DefaultAuthorizer: Cognito
+        Authorizers:
+          Cognito:
+            AuthType: COGNITO_USER_POOLS
+            UserPoolArn: !Sub arn:aws:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${UserPoolId}
+            AuthorizationScopes:
+              - openid
+      Cors:
+        AllowOrigin: "'*'"
+        AllowMethods: "'OPTIONS,GET,PUT'"
+        AllowHeaders: "'Content-Type,Authorization'"
+      GatewayResponses:
+        DEFAULT_4XX:
+          ResponseParameters:
+            Headers:
+              Access-Control-Allow-Origin: "'*'"
+              Access-Control-Allow-Methods: "'OPTIONS,GET,PUT'"
+              Access-Control-Allow-Headers: "'Content-Type,Authorization'"
+        DEFAULT_5XX:
+          ResponseParameters:
+            Headers:
+              Access-Control-Allow-Origin: "'*'"
+              Access-Control-Allow-Methods: "'OPTIONS,GET,PUT'"
+              Access-Control-Allow-Headers: "'Content-Type,Authorization'"
+
+  HeadFunction:
+    Type: "AWS::Serverless::Function"
+    Properties:
+      CodeUri:  ../../src/lambda
+      Handler: head.handler
+      Environment:
+        Variables:
+          TableName: !Ref TableName
+      Events:
+        APIEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref Api
+            Method: GET
+            Path: /head/{key+}
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref TableName
+      Runtime: nodejs18.x
+
+  GetFunction:
+    Type: "AWS::Serverless::Function"
+    Properties:
+      CodeUri:  ../../src/lambda
+      Handler: get.handler
+      Environment:
+        Variables:
+          DataBucket: !Ref DataBucket
+          AudioBucket: !Ref AudioBucket
+      Events:
+        APIEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref Api
+            Method: GET
+            Path: /get/{key+}
+      Policies:
+        - S3ReadPolicy:
+            BucketName: !Ref DataBucket
+        - S3ReadPolicy:
+            BucketName: !Ref AudioBucket
+      Runtime: nodejs18.x
+
+  ListFunction:
+    Type: "AWS::Serverless::Function"
+    Properties:
+      CodeUri:  ../../src/lambda
+      Handler: list.handler
+      Environment:
+        Variables:
+          TableName: !Ref TableName
+      Events:
+        APIEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref Api
+            Method: GET
+            Path: /list
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref TableName
+      Runtime: nodejs18.x
+
+  SearchFunction:
+    Type: "AWS::Serverless::Function"
+    Properties:
+      CodeUri:  ../../src/lambda
+      Handler: search.handler
+      Environment:
+        Variables:
+          TableName: !Ref TableName
+      Events:
+        APIEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref Api
+            Method: GET
+            Path: /search
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref TableName
+      Runtime: nodejs18.x
+
+  EntitiesFunction:
+    Type: "AWS::Serverless::Function"
+    Properties:
+      CodeUri:  ../../src/lambda
+      Handler: entities.handler
+      Environment:
+        Variables:
+          TableName: !Ref TableName
+      Events:
+        APIEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref Api
+            Method: GET
+            Path: /entities
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref TableName
+      Runtime: nodejs18.x
+
+  LanguagesFunction:
+    Type: "AWS::Serverless::Function"
+    Properties:
+      CodeUri:  ../../src/lambda
+      Handler: languages.handler
+      Environment:
+        Variables:
+          TableName: !Ref TableName
+      Events:
+        APIEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref Api
+            Method: GET
+            Path: /languages
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref TableName
+      Runtime: nodejs18.x
+
+  SwapFunction:
+    Type: "AWS::Serverless::Function"
+    Properties:
+      CodeUri:  ../../src/lambda
+      Handler: swap.handler
+      Environment:
+        Variables:
+          TableName: !Ref TableName
+          DataBucket: !Ref DataBucket
+      Events:
+        APIEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref Api
+            Method: PUT
+            Path: /swap/{key+}
+      Policies:
+        - S3CrudPolicy:
+            BucketName: !Ref DataBucket
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TableName
+      Runtime: nodejs18.x
+  
+  GenAIQueryFunction:
+    Type: "AWS::Serverless::Function"
+    Properties:
+      CodeUri:  ../../src/genai
+      Handler: index.lambda_handler
+      Timeout: 900
+      Layers:
+        - !Ref PyUtilsLayerArn
+        - !If 
+          - ShouldAddBoto3Layer
+          - !Ref Boto3LayerArn
+          - !Ref AWS::NoValue
+      Environment:
+        Variables:
+          QUERY_TYPE: !Ref GenAIQueryType
+          BEDROCK_MODEL_ID: !Ref GenAIQueryBedrockModelId
+          FETCH_TRANSCRIPT_LAMBDA_ARN: !Ref FetchTranscriptArn
+          ANTHROPIC_MODEL_IDENTIFIER: "claude-2"
+          ANTHROPIC_ENDPOINT_URL: "https://api.anthropic.com/v1/complete"
+          ANTHROPIC_API_KEY: !Ref LLMThirdPartyApiKey
+          LLM_TABLE_NAME: !Ref LLMTableName
+      Events:
+        APIEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref Api
+            Method: GET
+            Path: /genaiquery
+      Policies:
+        - arn:aws:iam::aws:policy/AmazonSSMReadOnlyAccess
+        - S3CrudPolicy:
+            BucketName: !Ref DataBucket
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TableName
+        - Statement:
+          - Sid: InvokeGetTranscript
+            Effect: Allow
+            Action:
+              - lambda:InvokeFunction
+            Resource: !Ref FetchTranscriptArn
+          - Sid: DynamoDBAccess
+            Effect: Allow
+            Resource: !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${LLMTableName}
+            Action:
+              - 'dynamodb:GetItem'
+          - Sid: InvokeBedrock
+            Effect: Allow
+            Action: 
+              - bedrock:InvokeModel
+            Resource:
+              - !Sub "arn:${AWS::Partition}:bedrock:*::foundation-model/*"
+              - !Sub "arn:${AWS::Partition}:bedrock:*:${AWS::AccountId}:custom-model/*"
+          - !If 
+              - HasAnthropicSummary
+              - Sid: SecretsManagerPolicy
+                Effect: Allow
+                Action:
+                  - 'secretsmanager:GetResourcePolicy'
+                  - 'secretsmanager:GetSecretValue'
+                  - 'secretsmanager:DescribeSecret'
+                  - 'secretsmanager:ListSecretVersionIds'
+                Resource: !Ref LLMThirdPartyApiKey
+              - !Ref "AWS::NoValue"
+      Runtime: python3.11
+
+  GenAIRefreshSummaryFunction:
+    Type: "AWS::Serverless::Function"
+    Properties:
+      CodeUri:  ../../src/genai
+      Handler: refresh_summary.lambda_handler
+      Timeout: 900
+      Layers:
+        - !Ref PyUtilsLayerArn
+        - !If
+          - ShouldAddBoto3Layer
+          - !Ref Boto3LayerArn
+          - !Ref AWS::NoValue
+      Environment:
+        Variables:
+          SUMMARIZER_ARN: !Ref SummarizerArn
+      Events:
+        APIEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref Api
+            Method: GET
+            Path: /genai/refreshsummary
+      Policies:
+        - Statement:
+          - Sid: InvokeGetSummary
+            Effect: Allow
+            Action:
+              - lambda:InvokeFunction
+            Resource: !Ref SummarizerArn
+      Runtime: python3.11
+
+  GeneratePresignedURLFunction:
+    Type: "AWS::Serverless::Function"
+    Properties:
+      CodeUri:  ../../src/lambda
+      Handler: presign.handler
+      Environment:
+        Variables:
+          AudioBucket: !Ref AudioBucket
+          AudioBucketPrefix: !Ref AudioBucketPrefix
+      Events:
+        APIEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref Api
+            Method: GET
+            Path: /presign
+      Policies:
+        - S3WritePolicy:
+            BucketName: !Ref AudioBucket
+      Runtime: nodejs18.x
+
+Outputs:
+  Uri:
+    Value: !Sub https://${Api}.execute-api.${AWS::Region}.amazonaws.com/Prod
+
+  RolesForKMSKey:
+    Value: !Join
+      - ', '
+      - - !Sub '"${GetFunctionRole.Arn}"'
+        - !Sub '"${SwapFunctionRole.Arn}"'

@@ -66,16 +66,16 @@ popd
 # pushd pca-server/src/pca
 # pip install -r requirements.txt -t .
 # popd
-pushd pca-ui/src/lambda
+pushd pca-dr-ui/src/lambda
 npm install
 popd
 
-pushd pca-ui/src/www
+pushd pca-dr-ui/src/www
 npm install
 npm run build || exit 1
 popd
 
-pushd pca-ui/src/witch
+pushd pca-dr-ui/src/witch
 npm install
 npm run build || exit 1
 popd

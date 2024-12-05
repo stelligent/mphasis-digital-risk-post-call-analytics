@@ -1,0 +1,241 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+
+Description: Amazon Transcribe Post Call Analytics - PCA UI - Cognito
+
+Parameters:
+
+  AdminUsername:
+    Type: String
+
+  AdminEmail:
+      Type: String
+
+  AllowedSignUpEmailDomain:
+    Type: String
+    Default: ""
+    Description: >-
+      Email address domain (example.com) or comma separated list of email domains  (example1.com,
+      example2.com) allowed to signin and signup using the web UI. To allow signup from any domain, 
+      enter *.
+      If left empty, signup via the web UI is disabled and users will have to be created
+      using
+      Cognito.
+    AllowedPattern: '^(\*||([\w-]+\.)+[\w-]{2,6}(, *([\w-]+\.)+[\w-]{2,6})*)$' 
+
+  Name:
+    Type: String
+
+  WebUri:
+    Type: String
+
+  Environment:
+    Type: String
+
+  CloudWatchLogsExpirationInDays:
+    Type: Number
+    Default: 14
+    Description: The number of days log events are kept in CloudWatch Logs.
+
+Conditions:
+  IsProd: !Equals [!Ref Environment, PROD]
+
+  ShouldAllowSignUpEmailDomain:
+    !Not [!Equals [!Ref AllowedSignUpEmailDomain, ""]]
+
+Resources:
+
+  # Custom resource to transform input to lowercase.                                             
+
+  GetDomainLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+  GetDomainLambda:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      Description: Returns the lowercase version of a string
+      MemorySize: 256
+      Runtime: python3.11
+      Handler: index.lambda_handler
+      Role: !GetAtt GetDomainLambdaRole.Arn
+      Timeout: 30
+      Code:
+        ZipFile: |
+          import cfnresponse
+          import time
+          def lambda_handler(event, context):                                                    
+              output = event['ResourceProperties'].get('InputString', '').lower()
+              output = f"{output}-{time.time_ns()}" # make unique
+              responseData = {'OutputString': output}                                            
+              cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData) 
+
+  GetDomain:
+    Type: Custom::GetDomain
+    Properties:
+      ServiceToken: !GetAtt GetDomainLambda.Arn
+      InputString: !Ref Name
+
+  PCAUserPool:
+    Type: "AWS::Cognito::UserPool"
+    Properties:
+      AdminCreateUserConfig:
+        AllowAdminCreateUserOnly: !If
+          - ShouldAllowSignUpEmailDomain
+          - false
+          - true
+        InviteMessageTemplate:
+          EmailMessage:
+            !Sub >
+              Hello {username},<br><br>
+              Welcome to the Amazon Transcribe Post Call Analytics (PCA) solution!<br><br>
+              Your temporary password is: {####}<br><br>
+              When the CloudFormation stack is COMPLETE, use the link below to log in
+              to the PCA web application, set your permanent password, 
+              and start analysing your calls!<br><br>
+              ${WebUri}<br><br>
+              Enjoy!<br>
+              AWS Post Call Analytics Solution (www.amazon.com/pca)<br>
+          EmailSubject: Welcome to the Amazon Transcribe Post Call Analytics (PCA) Solution!
+      AliasAttributes:
+        - email
+      AutoVerifiedAttributes:
+        - email
+      LambdaConfig: !If
+        - ShouldAllowSignUpEmailDomain
+        - PreAuthentication: !GetAtt CognitoUserPoolEmailDomainVerifyFunction.Arn
+          PreSignUp: !GetAtt CognitoUserPoolEmailDomainVerifyFunction.Arn
+        - !Ref AWS::NoValue
+      Schema:
+        - Required: true
+          Name: email
+          AttributeDataType: String
+          Mutable: true 
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 8
+          RequireLowercase: false
+          RequireNumbers: false
+          RequireSymbols: false
+          RequireUppercase: false
+
+  PCAUserPoolClient:
+    Type: "AWS::Cognito::UserPoolClient"
+    Properties:
+      AllowedOAuthFlows:
+        - code
+      AllowedOAuthFlowsUserPoolClient: true
+      AllowedOAuthScopes:
+        - openid
+      CallbackURLs: !If
+        - IsProd
+        - - !Ref WebUri
+        - - !Ref WebUri
+          - http://localhost:3000/
+      PreventUserExistenceErrors: ENABLED
+      SupportedIdentityProviders:
+        - COGNITO
+      UserPoolId: !Ref PCAUserPool
+
+  PCAUserPoolDomain:
+    Type: "AWS::Cognito::UserPoolDomain"
+    Properties:
+      Domain: !GetAtt GetDomain.OutputString
+      UserPoolId: !Ref PCAUserPool
+      
+  AdminUser:
+    Type: AWS::Cognito::UserPoolUser
+    Properties:
+      DesiredDeliveryMediums:
+        - EMAIL
+      UserAttributes:
+        - Name: email
+          Value:
+            !Ref AdminEmail
+      Username:
+        !Ref AdminUsername
+      UserPoolId:
+        !Ref PCAUserPool
+
+  CognitoUserPoolEmailDomainVerifyFunction:
+    Type: AWS::Serverless::Function
+    Condition: ShouldAllowSignUpEmailDomain
+    Properties:
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Timeout: 3
+      Environment:
+        Variables:
+          ALLOWED_SIGNUP_EMAIL_DOMAINS: !Ref AllowedSignUpEmailDomain
+      InlineCode: |
+        exports.handler = async (event, context) => {
+          console.log(event);
+          const allowed_domains = (
+              process.env?.ALLOWED_SIGNUP_EMAIL_DOMAINS
+              .split(",").map(domain => {return domain.trim()})
+          );
+          const { email } = event.request?.userAttributes;
+          if (!email || !email.includes('@')) {
+            throw Error('Username does not exists or invalid email address');
+          }
+          const emailDomain = email?.split('@')[1];
+          if (!emailDomain || !allowed_domains) {
+            throw new Error('Server error - invalid configuration');
+          }
+          if (!allowed_domains.includes(emailDomain) && allowed_domains != "*") {
+            throw new Error('Invalid email address domain');
+          }
+          return event;
+        };
+      LoggingConfig:
+        LogGroup:
+          Fn::Sub: /${AWS::StackName}/lambda/CognitoUserPoolEmailDomainVerifyFunction
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W89
+            reason: Customer can use VPC if desired
+          - id: W92
+            reason: Customer can choose reserved concurrency based on their requirement.
+    DependsOn:
+      - CognitoUserPoolEmailDomainVerifyFunctionLogGroup
+
+  CognitoUserPoolEmailDomainVerifyFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName:
+        Fn::Sub: /${AWS::StackName}/lambda/CognitoUserPoolEmailDomainVerifyFunction
+      RetentionInDays:
+        Ref: CloudWatchLogsExpirationInDays
+
+  CognitoUserPoolEmailDomainVerifyPermission:
+    Type: AWS::Lambda::Permission
+    Condition: ShouldAllowSignUpEmailDomain
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref CognitoUserPoolEmailDomainVerifyFunction
+      Principal: cognito-idp.amazonaws.com
+      SourceAccount: !Ref AWS::AccountId
+      SourceArn: !GetAtt PCAUserPool.Arn
+
+Outputs:
+  AdminUser:
+    Value: !Ref AdminUser
+
+  UserPoolId:
+    Value: !Ref PCAUserPool
+
+  UserPoolClientId:
+    Value: !Ref PCAUserPoolClient
+
+  BaseUri:
+    Value: !Sub https://${PCAUserPoolDomain}.auth.${AWS::Region}.amazoncognito.com

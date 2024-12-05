@@ -1,0 +1,144 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: Amazon Transcribe Post Call Analytics - PCA UI - Web
+Parameters:
+  AudioBucket:
+    Type: String
+  DataBucket:
+    Type: String
+
+Resources:
+  WebBucket:
+    Type: "AWS::S3::Bucket"
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain 
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+
+  CloudFrontOriginAccessIdentity:
+    Type: "AWS::CloudFront::CloudFrontOriginAccessIdentity"
+    Properties:
+      CloudFrontOriginAccessIdentityConfig:
+        Comment: !Sub OAI for ${AWS::StackName}
+
+  EdgeFunctionRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+                - edgelambda.amazonaws.com
+            Action: "sts:AssumeRole"
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"
+        - "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+
+  LogBucket:
+    Type: "AWS::S3::Bucket"
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain 
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      AccessControl: LogDeliveryWrite
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: ObjectWriter
+
+  WebBucketPolicy:
+    Type: "AWS::S3::BucketPolicy"
+    Properties:
+      Bucket: !Ref WebBucket
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Sub "arn:aws:iam::cloudfront:user/CloudFront Origin Access Identity ${CloudFrontOriginAccessIdentity}"
+            Action: "s3:GetObject"
+            Resource: !Sub arn:aws:s3:::${WebBucket}/*
+
+  Distribution:
+    Type: "AWS::CloudFront::Distribution"
+    Properties:
+      DistributionConfig:
+        DefaultCacheBehavior:
+          AllowedMethods:
+            - GET
+            - HEAD
+          CachedMethods:
+            - GET
+            - HEAD
+          Compress: true
+          ForwardedValues:
+            QueryString: false
+          TargetOriginId: S3
+          ViewerProtocolPolicy: redirect-to-https
+          DefaultTTL: 60
+          ResponseHeadersPolicyId: !Ref ResponseHeaders
+        DefaultRootObject: index.html
+        Enabled: true
+        Logging:
+          Bucket: !GetAtt LogBucket.RegionalDomainName
+        Origins:
+          - DomainName: !GetAtt WebBucket.RegionalDomainName
+            Id: S3
+            S3OriginConfig:
+              OriginAccessIdentity: !Sub origin-access-identity/cloudfront/${CloudFrontOriginAccessIdentity}
+        PriceClass: PriceClass_100
+        CustomErrorResponses:
+          - ErrorCode: 403
+            ResponseCode: 200
+            ResponsePagePath: /index.html
+
+  ResponseHeaders:
+    Type: AWS::CloudFront::ResponseHeadersPolicy
+    Properties:
+      ResponseHeadersPolicyConfig: 
+        Name: !Sub "${AWS::StackName}-SecurityHeaders"
+        SecurityHeadersConfig:
+            ContentSecurityPolicy: 
+            # Cover both S3 URL types for media-src entries as it
+            # varies by region
+              ContentSecurityPolicy: !Sub "default-src 'none'; img-src 'self' https://${DataBucket}.s3.amazonaws.com https://${DataBucket}.s3.${AWS::Region}.amazonaws.com data:; script-src 'self'; style-src 'self' 'unsafe-inline'; object-src 'none'; connect-src 'self' https://*.execute-api.${AWS::Region}.amazonaws.com https://*.auth.${AWS::Region}.amazoncognito.com https://${AudioBucket}.s3.amazonaws.com https://${AudioBucket}.s3.${AWS::Region}.amazonaws.com; font-src data:;  media-src https://${AudioBucket}.s3.amazonaws.com https://${AudioBucket}.s3.${AWS::Region}.amazonaws.com; manifest-src 'self';"
+              Override: True
+            ContentTypeOptions:               
+              Override: True
+            FrameOptions: 
+              FrameOption: DENY
+              Override: True
+            ReferrerPolicy: 
+              ReferrerPolicy: same-origin
+              Override: True
+            StrictTransportSecurity: 
+              AccessControlMaxAgeSec: 63072000
+              IncludeSubdomains: True
+              Override: True
+              Preload: True
+            XSSProtection: 
+              ModeBlock: True
+              Override: True
+              Protection: True
+
+
+Outputs:
+  DistributionId:
+    Value: !Ref Distribution
+
+  Uri:
+    Value: !Sub "https://${Distribution.DomainName}/"
+
+  Bucket:
+    Value: !Ref WebBucket
+
+  RolesForKMSKey:
+    Value: !Join
+      - ', '
+      - - !Sub '"${EdgeFunctionRole.Arn}"'
