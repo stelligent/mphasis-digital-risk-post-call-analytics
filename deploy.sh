@@ -13,6 +13,7 @@ aws cloudformation deploy \
         --no-execute-changeset \
         --parameter-overrides \
                 AdminEmail=${PCA_ADMIN_EMAIL} \
+                EnableGui=true \
                 TelephonyCTRType=${PCA_TELEPHONY_TYPE} \
                 PCAVersion="${PCA_VERSION}" \
                 PyZipName=python-utils-layer-v3.zip \

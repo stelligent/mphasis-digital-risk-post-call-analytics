@@ -193,7 +193,7 @@ const NoMatches = ({ children }) => (
 
 export const ContactTable = ({ data = [], loading = false, empty, header, variant='embedded' }) => {
   const history = useHistory();
-  
+
   const [preferences, setPreferences] = useLocalStorage(
     'contact-table-preferences',
     DEFAULT_PREFERENCES,
@@ -293,7 +293,7 @@ export const ContactTable = ({ data = [], loading = false, empty, header, varian
           }
         ],
         empty: (
-          <div>No Calls.</div>
+          <div>...</div>
         ),
         noMatch: (
           <div>No matches.</div>

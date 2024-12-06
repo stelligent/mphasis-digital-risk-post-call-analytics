@@ -78,8 +78,10 @@ function Navigation({ userName, email }) {
     <TopNavigation
       identity={{
         href: "/",
-        title: "Amazon Transcribe Post-Call Analytics",
-        iconName: "settings"
+        title: "Post-Call Analytics",
+        logo:{ src:"/images/mphasis-logo-dark.png",
+          alt:"MPhasis: Post-Call Analytics",
+         }
       }}
       i18nStrings={{
         searchIconAriaLabel: "Search",
@@ -98,13 +100,6 @@ function Navigation({ userName, email }) {
           externalIconAriaLabel: " (opens in a new tab)"
         },
         {
-          type: "button",
-          text: "PCA Blog Post",
-          href: "https://amazon.com/post-call-analytics",
-          external: true,
-          externalIconAriaLabel: " (opens in a new tab)"
-        },
-        {
           type: "menu-dropdown",
           text: userName,
           description: email,
@@ -117,28 +112,6 @@ function Navigation({ userName, email }) {
             /* { id: "profile", text: "Profile" },
             { id: "preferences", text: "Preferences" },
             { id: "security", text: "Security" },*/
-            {
-              id: "support-group",
-              text: "Support",
-              items: [
-                {
-                  id: "documentation",
-                  text: "GitHub/Readme",
-                  href: "https://github.com/aws-samples/amazon-transcribe-post-call-analytics/",
-                  external: true,
-                  externalIconAriaLabel:
-                    " (opens in new tab)"
-                },
-                {
-                  id: "feedback",
-                  text: "Blog Post",
-                  href: "https://amazon.com/post-call-analytics",
-                  external: true,
-                  externalIconAriaLabel:
-                    " (opens in new tab)"
-                }
-              ]
-            },
             { id: "signout", text: "Sign out" }
           ]
         }
