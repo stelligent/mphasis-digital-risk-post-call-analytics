@@ -11,4 +11,4 @@ export PCA_DEPLOY_BUCKET=pca-deploy-artifacts-${AWS_ACCOUNT_ID}
 
 export PCA_TELEPHONY_TYPE=none
 export PCA_PRELOAD_BUCKET_NAME=pca-inbound-call-files-${AWS_ACCOUNT_ID}
-export PCA_PRELOAD_OBJECT_KEY_REGEX='.xml$'
+export PCA_PRELOAD_OBJECT_KEY_REGEX='.xml.verify$'

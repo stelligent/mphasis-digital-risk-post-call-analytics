@@ -2,10 +2,9 @@ import {
   BrowserRouter as Router,
   Switch,
   Route,
-  NavLink,
 } from "react-router-dom";
 // import { Navbar, Nav, Container, Alert, Button } from "react-bootstrap";
-import { AppLayout,Alert,Notifications, Header, Link, BreadcrumbGroup, TopNavigation, Container, Button} from "@cloudscape-design/components"
+import { AppLayout,Alert,BreadcrumbGroup, TopNavigation} from "@cloudscape-design/components"
 import Home from "./routes/Home";
 import Search from "./routes/Search";
 import Dashboard from "./routes/Dashboard/index";

@@ -1,10 +1,10 @@
 //import { Table } from "react-bootstrap";
 import React from "react";
 import { useCollection } from '@cloudscape-design/collection-hooks';
-import { Table, TextFilter, Pagination, CollectionPreferences, PropertyFilter } from '@cloudscape-design/components';
-import { useHistory } from "react-router-dom";
+import { Table, PropertyFilter } from '@cloudscape-design/components';
+// import { useHistory } from "react-router-dom";
 import { Formatter } from "../format";
-import { Placeholder } from "./Placeholder";
+// import { Placeholder } from "./Placeholder";
 import { SentimentIcon } from "./SentimentIcon";
 import { TrendIcon } from "./TrendIcon";
 import "./ContactTable.css";
@@ -12,9 +12,9 @@ import { DateTimeForm, formatDateTime } from './DateTimeForm';
 import { ContactTablePreferences, DEFAULT_PREFERENCES } from './ContactTablePreferences'
 import { useLocalStorage } from '../common/localStorage';
 import Popover from "@cloudscape-design/components/popover";
-import Button from "@cloudscape-design/components/button";
-import StatusIndicator from "@cloudscape-design/components/status-indicator";
-import Icon from "@cloudscape-design/components/icon";
+// import Button from "@cloudscape-design/components/button";
+// import StatusIndicator from "@cloudscape-design/components/status-indicator";
+// import Icon from "@cloudscape-design/components/icon";
 import Link from "@cloudscape-design/components/link";
 
 const COLUMN_DEFINITIONS = [
@@ -176,44 +176,44 @@ const getMatchesCountText = function getMatchesCountText(count) {
   return count === 1 ? `1 match` : `${count} matches`;
 }
 
-const Loading = () =>
-  COLUMN_DEFINITIONS.map((c, i) => (
-    <td key={i}>
-      <Placeholder />
-    </td>
-  ));
+// const Loading = () =>
+//   COLUMN_DEFINITIONS.map((c, i) => (
+//     <td key={i}>
+//       <Placeholder />
+//     </td>
+//   ));
 
-const NoMatches = ({ children }) => (
-  <tr>
-    <td colSpan={COLUMN_DEFINITIONS.length}>
-      <div className="d-flex justify-content-center py-4">{children}</div>
-    </td>
-  </tr>
-);
+// const NoMatches = ({ children }) => (
+//   <tr>
+//     <td colSpan={COLUMN_DEFINITIONS.length}>
+//       <div className="d-flex justify-content-center py-4">{children}</div>
+//     </td>
+//   </tr>
+// );
 
 export const ContactTable = ({ data = [], loading = false, empty, header, variant='embedded' }) => {
-  const history = useHistory();
+  // useHistory();
 
   const [preferences, setPreferences] = useLocalStorage(
     'contact-table-preferences',
     DEFAULT_PREFERENCES,
   );
 
-  const onClick = (e) => {
-    console.log(e);
-    history.push(`/dashboard/${e.detail.item.key}`);
-  };
+  // const onClick = (e) => {
+  //   console.log(e);
+  //   history.push(`/dashboard/${e.detail.item.key}`);
+  // };
 
-  const [
-    callQuery,
-    setCallQuery
-  ] = React.useState({
-    tokens: [],
-    operation: "and"
-  });
+  // const [
+  //   callQuery,
+  //   setCallQuery
+  // ] = React.useState({
+  //   tokens: [],
+  //   operation: "and"
+  // });
 
 
-  const { items, actions, filteredItemsCount, collectionProps, paginationProps, propertyFilterProps } = useCollection(
+  const { items, filteredItemsCount, collectionProps, propertyFilterProps } = useCollection(
     data,
     {
       propertyFiltering: {
