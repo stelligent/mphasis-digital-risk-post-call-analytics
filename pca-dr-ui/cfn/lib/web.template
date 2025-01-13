@@ -11,7 +11,7 @@ Resources:
   WebBucket:
     Type: "AWS::S3::Bucket"
     DeletionPolicy: Retain
-    UpdateReplacePolicy: Retain 
+    UpdateReplacePolicy: Retain
     Properties:
       BucketEncryption:
         ServerSideEncryptionConfiguration:
@@ -42,7 +42,7 @@ Resources:
   LogBucket:
     Type: "AWS::S3::Bucket"
     DeletionPolicy: Retain
-    UpdateReplacePolicy: Retain 
+    UpdateReplacePolicy: Retain
     Properties:
       BucketEncryption:
         ServerSideEncryptionConfiguration:
@@ -64,6 +64,42 @@ Resources:
               AWS: !Sub "arn:aws:iam::cloudfront:user/CloudFront Origin Access Identity ${CloudFrontOriginAccessIdentity}"
             Action: "s3:GetObject"
             Resource: !Sub arn:aws:s3:::${WebBucket}/*
+
+  WebACL:
+    Type: AWS::WAFv2::WebACL
+    Properties:
+      DefaultAction:
+        Allow: {}
+      Scope: CLOUDFRONT
+      VisibilityConfig:
+        SampledRequestsEnabled: true
+        CloudWatchMetricsEnabled: true
+        MetricName: WebACL
+      Rules:
+        - Name: RateLimitRule
+          Priority: 1
+          Action:
+            Block: {}
+          Statement:
+            RateBasedStatement:
+              Limit: 1000
+              AggregateKeyType: IP
+          VisibilityConfig:
+            SampledRequestsEnabled: true
+            CloudWatchMetricsEnabled: true
+            MetricName: RateLimitRule
+        - Name: ManagedRuleGroup
+          Priority: 2
+          OverrideAction:
+            None: {}
+          Statement:
+            ManagedRuleGroupStatement:
+              VendorName: AWS
+              Name: AWSManagedRulesCommonRuleSet
+          VisibilityConfig:
+            SampledRequestsEnabled: true
+            CloudWatchMetricsEnabled: true
+            MetricName: ManagedRuleGroup
 
   Distribution:
     Type: "AWS::CloudFront::Distribution"
@@ -87,6 +123,7 @@ Resources:
         Enabled: true
         Logging:
           Bucket: !GetAtt LogBucket.RegionalDomainName
+        WebACLId: !GetAtt WebACL.Arn
         Origins:
           - DomainName: !GetAtt WebBucket.RegionalDomainName
             Id: S3
@@ -105,8 +142,6 @@ Resources:
         Name: !Sub "${AWS::StackName}-SecurityHeaders"
         SecurityHeadersConfig:
             ContentSecurityPolicy: 
-            # Cover both S3 URL types for media-src entries as it
-            # varies by region
               ContentSecurityPolicy: !Sub "default-src 'none'; img-src 'self' https://${DataBucket}.s3.amazonaws.com https://${DataBucket}.s3.${AWS::Region}.amazonaws.com data:; script-src 'self'; style-src 'self' 'unsafe-inline'; object-src 'none'; connect-src 'self' https://*.execute-api.${AWS::Region}.amazonaws.com https://*.auth.${AWS::Region}.amazoncognito.com https://${AudioBucket}.s3.amazonaws.com https://${AudioBucket}.s3.${AWS::Region}.amazonaws.com; font-src data:;  media-src https://${AudioBucket}.s3.amazonaws.com https://${AudioBucket}.s3.${AWS::Region}.amazonaws.com; manifest-src 'self';"
               Override: True
             ContentTypeOptions:               
@@ -126,7 +161,6 @@ Resources:
               ModeBlock: True
               Override: True
               Protection: True
-
 
 Outputs:
   DistributionId:
