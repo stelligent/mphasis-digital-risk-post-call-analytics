@@ -1,0 +1,42 @@
+[
+  {
+    "ParameterKey": "AvailabilityZone",
+    "ParameterValue": "us-east-1"
+  },
+  {
+    "ParameterKey": "BucketName",
+    "ParameterValue": "pca-inbound-call-files-495599748176"
+  },
+  {
+    "ParameterKey": "SftpPort",
+    "ParameterValue": "22"
+  },
+  {
+    "ParameterKey": "SubnetCidrBlock",
+    "ParameterValue": "10.16.166.0/25"
+  },
+  {
+    "ParameterKey": "SubnetID",
+    "ParameterValue": "subnet-08b09a7e29edd6ae7"
+  },
+  {
+    "ParameterKey": "VpcCidrBlock",
+    "ParameterValue": "10.16.166.0/24"
+  },
+  {
+    "ParameterKey": "VpcID",
+    "ParameterValue": "vpc-0d76c6dec7259c8c7"
+  },
+  {
+    "ParameterKey": "TransferUserName",
+    "ParameterValue": "mitel-call-files"
+  },
+  {
+    "ParameterKey": "SecurityPolicyName",
+    "ParameterValue": "TransferSecurityPolicy-2020-06"
+  },
+  {
+    "ParameterKey": "IngressRules",
+    "ParameterValue": "tcp:172.25.4.204/32:22,tcp:172.25.4.251/32:22,tcp:172.25.22.30/32:22"
+  }
+]

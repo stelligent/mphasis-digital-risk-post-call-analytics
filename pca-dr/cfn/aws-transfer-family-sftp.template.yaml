@@ -1,0 +1,290 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  AWS CloudFormation template to create an AWS Transfer Family SFTP server with private VPC endpoint
+  and S3 bucket integration in the specified AWS region.
+
+Mappings:
+  ProtocolMap:
+    tcp:
+      Protocol: "6"
+    udp:
+      Protocol: "17"
+    icmp:
+      Protocol: "1"
+    icmpv6:
+      Protocol: "58"
+    all:
+      Protocol: "-1"
+
+Parameters:
+  BucketName:
+    Type: String
+    Description: Name or ARN of the S3 bucket for storing SFTP uploads
+    Default: "-"
+
+  VpcID:
+    Type: String
+    Description: Optional ID of an existing VPC
+    Default: ""
+
+  SubnetID:
+    Type: String
+    Description: Optional ID of an existing Subnet
+    Default: ""
+
+  VpcCidrBlock:
+    Type: String
+    Description: CIDR block for the VPC (if created by this template)
+    Default: 10.0.0.0/16
+
+  SubnetCidrBlock:
+    Type: String
+    Description: CIDR block for the Subnet (if created by this template)
+    Default: 10.0.1.0/24
+
+  AvailabilityZone:
+    Type: String
+    Description: Availability Zone for the Subnet (if created by this template)
+    Default: "us-east-1"
+
+  SftpPort:
+    Type: Number
+    Description: Port number for the SFTP server
+    Default: 22
+
+  IngressRules:
+    Type: String
+    Description: >
+      Comma-delimited list of up to 10 ingress rules in the format protocol:CIDR:port.
+      Example with 2 rules: tcp:10.0.0.0/21:22,tcp:10.0.1.0/21:443
+      Supports up to 10 ingress rules.
+
+  SecurityPolicyName:
+    Type: String
+    Description: AWS Transfer Framily Security Policy Name
+    Default: TransferSecurityPolicy-2024-01
+
+  TransferUserName:
+    Type: String
+    Description: Name of user for SFTP Transfer
+    Default: "mitel-call-files"
+
+Conditions:
+  UseExistingVpc:
+    Fn::Not:
+      - Fn::Equals:
+        - !Ref VpcID
+        - ""
+  CreateNewVpc:
+    Fn::Equals:
+      - !Ref VpcID
+      - ""
+
+  UseExistingSubnet:
+    Fn::Not:
+      - Fn::Equals:
+        - !Ref SubnetID
+        - ""
+  CreateNewSubnet:
+    Fn::Equals:
+      - !Ref SubnetID
+      - ""
+
+  UseExistingBucket:
+    Fn::Not:
+      - Fn::Equals:
+        - !Ref BucketName
+        - ""
+  CreateNewBucket:
+    Fn::Equals:
+      - !Ref BucketName
+      - ""
+
+  Rule1Exists: !Not [!Equals [!Select [0, !Split [",", !Join [",", [!Ref IngressRules, "tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::"]]]], "tcp::"]]
+  Rule2Exists: !Not [!Equals [!Select [1, !Split [",", !Join [",", [!Ref IngressRules, "tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::"]]]], "tcp::"]]
+  Rule3Exists: !Not [!Equals [!Select [2, !Split [",", !Join [",", [!Ref IngressRules, "tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::"]]]], "tcp::"]]
+  Rule4Exists: !Not [!Equals [!Select [3, !Split [",", !Join [",", [!Ref IngressRules, "tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::"]]]], "tcp::"]]
+  Rule5Exists: !Not [!Equals [!Select [4, !Split [",", !Join [",", [!Ref IngressRules, "tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::"]]]], "tcp::"]]
+  Rule6Exists: !Not [!Equals [!Select [5, !Split [",", !Join [",", [!Ref IngressRules, "tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::"]]]], "tcp::"]]
+  Rule7Exists: !Not [!Equals [!Select [6, !Split [",", !Join [",", [!Ref IngressRules, "tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::"]]]], "tcp::"]]
+  Rule8Exists: !Not [!Equals [!Select [7, !Split [",", !Join [",", [!Ref IngressRules, "tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::"]]]], "tcp::"]]
+  Rule9Exists: !Not [!Equals [!Select [8, !Split [",", !Join [",", [!Ref IngressRules, "tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::"]]]], "tcp::"]]
+  Rule10Exists: !Not [!Equals [!Select [9, !Split [",", !Join [",", [!Ref IngressRules, "tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::"]]]], "tcp::"]]
+
+
+
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Condition: CreateNewVpc
+    Properties:
+      CidrBlock: !Ref VpcCidrBlock
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+
+  Subnet:
+    Type: AWS::EC2::Subnet
+    Condition: CreateNewSubnet
+    Properties:
+      VpcId: !If [UseExistingVpc, !Ref VpcID, !Ref VPC]
+      CidrBlock: !Ref SubnetCidrBlock
+      MapPublicIpOnLaunch: false
+      AvailabilityZone: !Ref AvailabilityZone
+
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for the SFTP server
+      VpcId: !If [UseExistingVpc, !Ref VpcID, !Ref VPC]
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: !Ref SftpPort
+          ToPort: !Ref SftpPort
+          CidrIp: !Ref VpcCidrBlock
+        - !If
+          - Rule1Exists
+          - CidrIp: !Select [1, !Split [":", !Select [0, !Split [",", !Join [",", [!Ref IngressRules, "tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::"]]]]]]
+            IpProtocol: !FindInMap [ProtocolMap, !Select [0, !Split [":", !Select [0, !Split [",", !Join [",", [!Ref IngressRules, "tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::"]]]]]], Protocol]
+            FromPort: !Select [2, !Split [":", !Select [0, !Split [",", !Join [",", [!Ref IngressRules, "tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::"]]]]]]
+            ToPort: !Select [2, !Split [":", !Select [0, !Split [",", !Join [",", [!Ref IngressRules, "tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::"]]]]]]
+          - !Ref AWS::NoValue
+        - !If
+          - Rule2Exists
+          - CidrIp: !Select [1, !Split [":", !Select [1, !Split [",", !Join [",", [!Ref IngressRules, "tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::"]]]]]]
+            IpProtocol: !FindInMap [ProtocolMap, !Select [0, !Split [":", !Select [1, !Split [",", !Join [",", [!Ref IngressRules, "tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::"]]]]]], Protocol]
+            FromPort: !Select [2, !Split [":", !Select [1, !Split [",", !Join [",", [!Ref IngressRules, "tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::"]]]]]]
+            ToPort: !Select [2, !Split [":", !Select [1, !Split [",", !Join [",", [!Ref IngressRules, "tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::"]]]]]]
+          - !Ref AWS::NoValue
+        - !If
+          - Rule3Exists
+          - CidrIp: !Select [1, !Split [":", !Select [2, !Split [",", !Join [",", [!Ref IngressRules, "tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::"]]]]]]
+            IpProtocol: !FindInMap [ProtocolMap, !Select [0, !Split [":", !Select [2, !Split [",", !Join [",", [!Ref IngressRules, "tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::"]]]]]], Protocol]
+            FromPort: !Select [2, !Split [":", !Select [2, !Split [",", !Join [",", [!Ref IngressRules, "tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::"]]]]]]
+            ToPort: !Select [2, !Split [":", !Select [2, !Split [",", !Join [",", [!Ref IngressRules, "tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::"]]]]]]
+          - !Ref AWS::NoValue
+        - !If
+          - Rule4Exists
+          - CidrIp: !Select [1, !Split [":", !Select [3, !Split [",", !Join [",", [!Ref IngressRules, "tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::"]]]]]]
+            IpProtocol: !FindInMap [ProtocolMap, !Select [0, !Split [":", !Select [3, !Split [",", !Join [",", [!Ref IngressRules, "tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::"]]]]]], Protocol]
+            FromPort: !Select [2, !Split [":", !Select [3, !Split [",", !Join [",", [!Ref IngressRules, "tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::"]]]]]]
+            ToPort: !Select [2, !Split [":", !Select [3, !Split [",", !Join [",", [!Ref IngressRules, "tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::"]]]]]]
+          - !Ref AWS::NoValue
+        - !If
+          - Rule5Exists
+          - CidrIp: !Select [1, !Split [":", !Select [4, !Split [",", !Join [",", [!Ref IngressRules, "tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::"]]]]]]
+            IpProtocol: !FindInMap [ProtocolMap, !Select [0, !Split [":", !Select [4, !Split [",", !Join [",", [!Ref IngressRules, "tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::"]]]]]], Protocol]
+            FromPort: !Select [2, !Split [":", !Select [4, !Split [",", !Join [",", [!Ref IngressRules, "tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::"]]]]]]
+            ToPort: !Select [2, !Split [":", !Select [4, !Split [",", !Join [",", [!Ref IngressRules, "tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::"]]]]]]
+          - !Ref AWS::NoValue
+        - !If
+          - Rule6Exists
+          - CidrIp: !Select [1, !Split [":", !Select [5, !Split [",", !Join [",", [!Ref IngressRules, "tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::"]]]]]]
+            IpProtocol: !FindInMap [ProtocolMap, !Select [0, !Split [":", !Select [5, !Split [",", !Join [",", [!Ref IngressRules, "tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::"]]]]]], Protocol]
+            FromPort: !Select [2, !Split [":", !Select [5, !Split [",", !Join [",", [!Ref IngressRules, "tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::"]]]]]]
+            ToPort: !Select [2, !Split [":", !Select [5, !Split [",", !Join [",", [!Ref IngressRules, "tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::"]]]]]]
+          - !Ref AWS::NoValue
+        - !If
+          - Rule7Exists
+          - CidrIp: !Select [1, !Split [":", !Select [6, !Split [",", !Join [",", [!Ref IngressRules, "tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::"]]]]]]
+            IpProtocol: !FindInMap [ProtocolMap, !Select [0, !Split [":", !Select [6, !Split [",", !Join [",", [!Ref IngressRules, "tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::"]]]]]], Protocol]
+            FromPort: !Select [2, !Split [":", !Select [6, !Split [",", !Join [",", [!Ref IngressRules, "tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::"]]]]]]
+            ToPort: !Select [2, !Split [":", !Select [6, !Split [",", !Join [",", [!Ref IngressRules, "tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::"]]]]]]
+          - !Ref AWS::NoValue
+        - !If
+          - Rule8Exists
+          - CidrIp: !Select [1, !Split [":", !Select [7, !Split [",", !Join [",", [!Ref IngressRules, "tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::"]]]]]]
+            IpProtocol: !FindInMap [ProtocolMap, !Select [0, !Split [":", !Select [7, !Split [",", !Join [",", [!Ref IngressRules, "tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::"]]]]]], Protocol]
+            FromPort: !Select [2, !Split [":", !Select [7, !Split [",", !Join [",", [!Ref IngressRules, "tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::"]]]]]]
+            ToPort: !Select [2, !Split [":", !Select [7, !Split [",", !Join [",", [!Ref IngressRules, "tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::"]]]]]]
+          - !Ref AWS::NoValue
+        - !If
+          - Rule9Exists
+          - CidrIp: !Select [1, !Split [":", !Select [8, !Split [",", !Join [",", [!Ref IngressRules, "tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::"]]]]]]
+            IpProtocol: !FindInMap [ProtocolMap, !Select [0, !Split [":", !Select [8, !Split [",", !Join [",", [!Ref IngressRules, "tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::"]]]]]], Protocol]
+            FromPort: !Select [2, !Split [":", !Select [8, !Split [",", !Join [",", [!Ref IngressRules, "tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::"]]]]]]
+            ToPort: !Select [2, !Split [":", !Select [8, !Split [",", !Join [",", [!Ref IngressRules, "tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::"]]]]]]
+          - !Ref AWS::NoValue
+        - !If
+          - Rule10Exists
+          - CidrIp: !Select [1, !Split [":", !Select [9, !Split [",", !Join [",", [!Ref IngressRules, "tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::"]]]]]]
+            IpProtocol: !FindInMap [ProtocolMap, !Select [0, !Split [":", !Select [9, !Split [",", !Join [",", [!Ref IngressRules, "tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::"]]]]]], Protocol]
+            FromPort: !Select [2, !Split [":", !Select [9, !Split [",", !Join [",", [!Ref IngressRules, "tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::"]]]]]]
+            ToPort: !Select [2, !Split [":", !Select [9, !Split [",", !Join [",", [!Ref IngressRules, "tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::,tcp::"]]]]]]
+          - !Ref AWS::NoValue
+
+  VPCEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.transfer.server"
+      VpcId: !If [UseExistingVpc, !Ref VpcID, !Ref VPC]
+      SubnetIds:
+        - !If [UseExistingSubnet, !Ref SubnetID, !Ref Subnet]
+      SecurityGroupIds:
+        - !Ref SecurityGroup
+      VpcEndpointType: Interface
+
+  S3Bucket:
+    Type: AWS::S3::Bucket
+    Condition: CreateNewBucket
+    Properties:
+      BucketName: !Sub "transfer-sftp-bucket-${AWS::StackName}"
+
+  TransferServer:
+    Type: AWS::Transfer::Server
+    Properties:
+      SecurityPolicyName: !Ref SecurityPolicyName
+      EndpointType: VPC
+      EndpointDetails:
+        VpcId: !If [UseExistingVpc, !Ref VpcID, !Ref VPC]
+        SubnetIds:
+          - !If [UseExistingSubnet, !Ref SubnetID, !Ref Subnet]
+        SecurityGroupIds:
+          - !Ref SecurityGroup
+      IdentityProviderType: SERVICE_MANAGED
+
+  TransferUser:
+    Type: AWS::Transfer::User
+    Properties:
+      ServerId: !GetAtt TransferServer.ServerId
+      UserName: !Ref TransferUserName
+      Role: !GetAtt TransferUserRole.Arn
+      HomeDirectory: !Sub "/${BucketName}"
+
+  TransferUserRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: transfer.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: S3AccessPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:ListBucket
+                Resource:
+                  - !If [UseExistingBucket, !Sub "arn:aws:s3:::${BucketName}", !Sub "arn:aws:s3:::transfer-sftp-bucket-${AWS::StackName}"]
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                  - s3:DeleteObject
+                Resource:
+                  - !If [UseExistingBucket, !Sub "arn:aws:s3:::${BucketName}/*", !Sub "arn:aws:s3:::transfer-sftp-bucket-${AWS::StackName}/*"]
+
+
+
+
+Outputs:
+  S3BucketName:
+    Description: Name of the S3 bucket used for SFTP uploads
+    Value: !If [UseExistingBucket, !Ref BucketName, !Ref S3Bucket]
+  SecurityGroupId:
+    Description: The ID of the security group
+    Value: !Ref SecurityGroup
