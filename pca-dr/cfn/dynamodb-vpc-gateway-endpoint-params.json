@@ -1,0 +1,10 @@
+[
+  {
+    "ParameterKey": "VpcId",
+    "ParameterValue": "vpc-0d76c6dec7259c8c7"
+  },
+  {
+    "ParameterKey": "RouteTableIds",
+    "ParameterValue": "rtb-09bcb0596734c6682"
+  }
+]

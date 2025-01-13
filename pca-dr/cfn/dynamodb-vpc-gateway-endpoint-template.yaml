@@ -1,0 +1,29 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: CloudFormation template to create a DynamoDB VPC Gateway Endpoint.
+
+Parameters:
+  VpcId:
+    Type: String
+    Description: The ID of the VPC where the DynamoDB Gateway Endpoint will be created.
+
+  RouteTableIds:
+    Type: String
+    Description: A comma-delimited list of Route Table IDs. Minimum of 1 and maximum of 10 Route Table IDs.
+    AllowedPattern: "^rtb-[0-9a-f]{17}(,rtb-[0-9a-f]{17}){0,9}$"
+    ConstraintDescription: Must be a comma-delimited list of valid Route Table IDs (e.g., rtb-1234567890abcdef0).
+
+Resources:
+  DynamoDBVPCEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.dynamodb
+      VpcId: !Ref VpcId
+      VpcEndpointType: Gateway
+      RouteTableIds: !Split [",", !Ref RouteTableIds]
+
+Outputs:
+  DynamoDBVPCEndpointId:
+    Description: The ID of the DynamoDB VPC Gateway Endpoint.
+    Value: !Ref DynamoDBVPCEndpoint
+    Export:
+      Name: DynamoDBVPCEndpointId
